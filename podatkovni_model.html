@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Podatkovni model - Fitness Buddy</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        ul {
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Podatkovni model aplikacije Fitness Buddy</h1>
+
+<div class="section">
+<p>
+Podatkovni model aplikacije Fitness Buddy opisuje strukturo podatkov, ki omogočajo spremljanje telesne aktivnosti,
+prehrane in navad uporabnika. Model je zasnovan tako, da podpira delovanje aplikacije tudi brez internetne povezave
+ter omogoča kasnejšo sinhronizacijo s strežnikom.
+</p>
+</div>
+
+<div class="section">
+<h2>Glavne entitete</h2>
+
+<ul>
+<li><b>Uporabnik (User)</b>: id, ime, email, geslo, datum_registracije</li>
+<li><b>Trening (Workout)</b>: id, user_id, datum, trajanje, tip_treninga</li>
+<li><b>Navada (Habit)</b>: id, user_id, naziv, cilj</li>
+<li><b>Evidenca navad (HabitLog)</b>: id, habit_id, datum, vrednost</li>
+<li><b>Prehrana (Meal)</b>: id, user_id, naziv_obroka, čas, kalorije</li>
+</ul>
+
+</div>
+
+<div class="section">
+<h2>Relacije med entitetami</h2>
+
+<ul>
+<li>En uporabnik ima več treningov (1:N)</li>
+<li>En uporabnik ima več navad (1:N)</li>
+<li>Ena navada ima več dnevnih zapisov (1:N)</li>
+<li>En uporabnik ima več prehranskih zapisov (1:N)</li>
+</ul>
+
+</div>
+
+<div class="section">
+<h2>Dostopnost podatkov</h2>
+
+<h3>Lokalno na napravi (offline)</h3>
+<ul>
+<li>navade uporabnika</li>
+<li>zadnji treningi</li>
+<li>dnevni zapisi navad</li>
+</ul>
+
+<p>
+Ti podatki so shranjeni lokalno, da aplikacija deluje tudi brez internetne povezave.
+</p>
+
+<h3>Na strežniku</h3>
+<ul>
+<li>uporabniški račun</li>
+<li>celotna zgodovina treningov in prehrane</li>
+<li>analitika in statistika</li>
+</ul>
+
+<h3>Sinhronizacija podatkov</h3>
+<ul>
+<li>ob ponovni povezavi z internetom</li>
+<li>ob odprtju aplikacije</li>
+<li>periodično v ozadju</li>
+</ul>
+
+<p>
+Sinhronizacija omogoča usklajevanje lokalnih podatkov z oddaljenim strežnikom.
+</p>
+
+</div>
+
+<div class="section">
+<h2>ER diagram</h2>
+
+<p>
+Spodnji diagram prikazuje povezave med entitetami v podatkovnem modelu aplikacije.
+</p>
+
+<img src="/er_diagram.png" width="600">
+
+</div>
+
+</body>
+</html>
