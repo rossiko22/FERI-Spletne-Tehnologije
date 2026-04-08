@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Posebnosti - Fitness Buddy</title>
+<meta charset="UTF-8">
+<style>
+body {
+    font-family: Arial;
+    padding: 20px;
+    line-height: 1.6;
+}
+h1, h2, h3 {
+    color: #2c3e50;
+}
+ul {
+    margin-bottom: 20px;
+}
+.section {
+    margin-bottom: 30px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 20px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: left;
+}
+th {
+    background-color: #f0f0f0;
+}
+</style>
+</head>
+<body>
+
+<h1>Posebnosti implementacije - Fitness Buddy</h1>
+
+<div class="section">
+<p>
+Ta dokument opredeljuje tehnične zahteve, povezane z implementacijo posameznih funkcionalnosti aplikacije Fitness Buddy.
+Za vsako funkcionalnost so navedene specifične tehnologije, knjižnice ali senzorji, ki so potrebni za njeno delovanje.
+</p>
+</div>
+
+<div class="section">
+<h2>1. Beleženje treningov</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li>Lokalna baza podatkov za shranjevanje treningov brez internetne povezave (<b>IndexedDB</b> prek knjižnice Dexie.js)</li>
+<li>Backend REST API za sinhronizacijo podatkov z oddaljenim strežnikom (<b>Node.js + Express</b>)</li>
+<li>Relacijska ali dokumentna baza na strežniku (<b>PostgreSQL</b> ali <b>MongoDB</b>)</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Ni obveznih senzorjev za osnovno delovanje</li>
+<li>Opcijsko: <b>akcelerometer / žiroskop</b> za samodejno zaznavanje tipa gibanja</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>2. Sledenje prehrani</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li>Integracija z javno bazo podatkov o živilih (npr. <b>Open Food Facts API</b>) za pridobivanje kalorij in makrohranil</li>
+<li>Lokalno predpomnjenje pogosto iskanih živil za delovanje brez interneta</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Opcijsko: <b>kamera</b> za skeniranje črtne kode živila in samodejno iskanje v bazi</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>3. Postavljanje ciljev</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li>Logika na odjemalcu za izračun napredka in primerjavo s ciljem</li>
+<li>Shramba ciljev v lokalni bazi (IndexedDB) in sinhronizacija s strežnikom</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Ni posebnih zahtev glede senzorjev</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>4. Pametni opomniki</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li><b>Web Notifications API</b> za prikazovanje obvestil v brskalniku</li>
+<li><b>Service Worker</b> za prikaz opomnikov v ozadju, tudi ko aplikacija ni odprta</li>
+<li><b>Background Sync API</b> za usklajevanje opomnikov z nastavitvami na strežniku</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Naprava mora imeti <b>omogočena sistemska obvestila (push notifications)</b></li>
+</ul>
+</div>
+
+<div class="section">
+<h2>5. Analiza napredka</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li>Knjižnica za vizualizacijo podatkov na odjemalcu (<b>Chart.js</b> ali <b>D3.js</b>)</li>
+<li>Agregacija podatkov iz lokalne baze za prikaz grafov brez internetne povezave</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Ni posebnih zahtev glede senzorjev</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>6. Sledenje hidraciji</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li>Lokalna shramba dnevnih vrednosti (IndexedDB / localStorage)</li>
+<li>Integracija z sistemom opomnikov (Service Worker) za periodična opozorila</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Ni obveznih senzorjev</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>7. Upravljanje profila</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li>Avtentikacija uporabnika (<b>JWT tokeni</b> ali OAuth 2.0)</li>
+<li>Varno shranjevanje profilnih podatkov na strežniku</li>
+<li>Lokalna kopija ključnih nastavitev za offline personalizacijo</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Ni posebnih zahtev glede senzorjev</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>8. Offline delovanje (PWA)</h2>
+<h3>Tehnične zahteve</h3>
+<ul>
+<li><b>Service Worker</b> za predpomnjenje virov aplikacije (HTML, CSS, JS, slike)</li>
+<li><b>Web App Manifest</b> za namestitev aplikacije na domači zaslon naprave</li>
+<li><b>IndexedDB</b> za lokalno shranjevanje podatkov med offline delom</li>
+<li><b>Background Sync API</b> za sinhronizacijo ob vzpostavitvi internetne povezave</li>
+</ul>
+<h3>Senzorji / posebnosti naprave</h3>
+<ul>
+<li>Ni posebnih senzorjev, vendar mora naprava podpirati <b>Service Worker API</b> (podprt v vseh modernih brskalnikih)</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Povzetek tehnološkega sklada</h2>
+<table>
+<tr>
+    <th>Plast</th>
+    <th>Tehnologija</th>
+</tr>
+<tr>
+    <td>Frontend / odjemalec</td>
+    <td>HTML, CSS, JavaScript, PWA (Service Worker, Web App Manifest)</td>
+</tr>
+<tr>
+    <td>Lokalna shramba</td>
+    <td>IndexedDB (Dexie.js), localStorage</td>
+</tr>
+<tr>
+    <td>Backend</td>
+    <td>Node.js, Express</td>
+</tr>
+<tr>
+    <td>Baza podatkov</td>
+    <td>PostgreSQL ali MongoDB</td>
+</tr>
+<tr>
+    <td>Vizualizacija</td>
+    <td>Chart.js ali D3.js</td>
+</tr>
+<tr>
+    <td>Avtentikacija</td>
+    <td>JWT tokeni</td>
+</tr>
+<tr>
+    <td>Obvestila</td>
+    <td>Web Notifications API, Background Sync API</td>
+</tr>
+<tr>
+    <td>Opcijsko (senzorji)</td>
+    <td>Kamera (črtna koda), akcelerometer (zaznavanje gibanja)</td>
+</tr>
+</table>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Funkcionalnosti odjemalca - Fitness Buddy</title>
+<meta charset="UTF-8">
+<style>
+body {
+    font-family: Arial;
+    padding: 20px;
+    line-height: 1.6;
+}
+h1, h2 {
+    color: #2c3e50;
+}
+ul {
+    margin-bottom: 20px;
+}
+.section {
+    margin-bottom: 30px;
+}
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 20px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px 12px;
+    text-align: left;
+}
+th {
+    background-color: #f0f0f0;
+}
+</style>
+</head>
+<body>
+
+<h1>Funkcionalnosti odjemalca - Fitness Buddy</h1>
+
+<div class="section">
+<p>
+Fitness Buddy je progresivna spletna aplikacija (PWA) za spremljanje telesne aktivnosti, prehranskih navad
+in splošnega življenjskega sloga. Spodaj so opisane vse funkcionalnosti, ki jih aplikacija zagotavlja
+končnemu uporabniku, skupaj z vhodi, izhodi in kratkim opisom.
+</p>
+</div>
+
+<div class="section">
+<h2>1. Beleženje treningov</h2>
+<p>Uporabnik beleži posamezne treninge z vsemi relevantnimi podatki. Aplikacija shrani zgodovino sej in omogoča pregled preteklih aktivnosti.</p>
+<table>
+<tr><th>Vhod</th><td>Vrsta vadbe, trajanje, serije, ponovitve, intenzivnost</td></tr>
+<tr><th>Izhod</th><td>Shranjeni zapis treninga, posodobljena statistika</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>2. Sledenje prehrani</h2>
+<p>Vnos dnevnih obrokov z opisom hrane in kalorično vrednostjo. Aplikacija izračuna dnevni vnos kalorij in ga primerja s ciljem uporabnika.</p>
+<table>
+<tr><th>Vhod</th><td>Naziv obroka, kalorije, makrohranila, čas obroka</td></tr>
+<tr><th>Izhod</th><td>Dnevna kalorična bilanca, pregled obrokov</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>3. Postavljanje ciljev</h2>
+<p>Uporabnik nastavi osebne fitnes cilje (npr. izguba teže, mišična masa, vzdržljivost). Aplikacija sledi napredku in prikazuje odstotek dosežka.</p>
+<table>
+<tr><th>Vhod</th><td>Tip cilja, ciljna vrednost, rok dosega</td></tr>
+<tr><th>Izhod</th><td>Napredek v %, vizualni kazalnik, predvideni datum dosega</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>4. Pametni opomniki</h2>
+<p>Sistem samodejnih opomnikov za hidracijo, obroke, vadbo in počitek. Opomniki se prilagajajo vzorcem uporabnika in delujejo tudi brez internetne povezave.</p>
+<table>
+<tr><th>Vhod</th><td>Tip opomnika, ura / interval, preference uporabnika</td></tr>
+<tr><th>Izhod</th><td>Push obvestilo, in-app obvestilo, dnevni povzetek</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>5. Analiza napredka</h2>
+<p>Grafični prikaz napredka skozi čas za treninge, prehrano in navade. Vključuje tedenske in mesečne povzetke ter primerjavo z preteklimi obdobji.</p>
+<table>
+<tr><th>Vhod</th><td>Izbrano časovno obdobje, kategorija podatkov</td></tr>
+<tr><th>Izhod</th><td>Grafi, povzetki statistike, primerjava obdobij</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>6. Sledenje hidraciji</h2>
+<p>Dnevno beleženje zaužite vode z vizualnim prikazom doseženega deleža priporočenega vnosa. Opomniki spomnijo na pitje vode ob neaktivnosti.</p>
+<table>
+<tr><th>Vhod</th><td>Količina zaužite vode (ml), dnevni cilj</td></tr>
+<tr><th>Izhod</th><td>Odstotek doseženega cilja, vizualni indikator, dnevni pregled</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>7. Upravljanje profila</h2>
+<p>Nastavitev osebnih podatkov (ime, starost, teža, višina, raven aktivnosti). Ti podatki se uporabijo za personalizacijo priporočil in izračunov kalorij.</p>
+<table>
+<tr><th>Vhod</th><td>Osebni podatki, raven aktivnosti, prehranske preference</td></tr>
+<tr><th>Izhod</th><td>Posodobljeni profil, prilagojena priporočila, izračun BMI / TDEE</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>8. Offline delovanje (PWA)</h2>
+<p>Aplikacija deluje brez internetne povezave. Podatki se shranijo lokalno (IndexedDB / localStorage) in sinhronizirajo ob vzpostavitvi povezave prek Service Workerja.</p>
+<table>
+<tr><th>Vhod</th><td>Lokalni vnosi podatkov med odsotnostjo povezave</td></tr>
+<tr><th>Izhod</th><td>Lokalna shramba, sinhronizacija ob ponovni povezavi</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>UML diagram primerov uporabe</h2>
+<p>Spodnji diagram prikazuje funkcionalnosti aplikacije, vloge uporabnikov in medsebojne relacije.</p>
+<img src="/uml_diagram.png" width="700" alt="UML diagram primerov uporabe">
+</div>
+
+</body>
+</html>
