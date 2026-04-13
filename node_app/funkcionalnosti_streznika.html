@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <title>Funkcionalnosti strežnika - Fitness Buddy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            line-height: 1.6;
+            background-color: #f9fafb;
+            color: #1f2937;
+        }
+
+        h1, h2 {
+            color: #1e3a8a;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        img {
+            max-width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        ul {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Funkcionalnosti strežnika – Fitness Buddy</h1>
+
+    <div class="section">
+        <p>
+            Strežniški del aplikacije Fitness Buddy skrbi za obdelavo podatkov, avtentikacijo uporabnikov,
+            shranjevanje informacij, sinhronizacijo med napravami in pripravo podatkov za analizo napredka.
+            Strežnik je osrednji del sistema, saj povezuje odjemalsko aplikacijo z bazo podatkov in zagotavlja varno delovanje.
+        </p>
+    </div>
+
+    <div class="section">
+        <h2>1. Registracija in prijava uporabnika</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik omogoča ustvarjanje novega uporabniškega računa in prijavo obstoječega uporabnika.</p>
+        <p><span class="label">Vhodi:</span> uporabniško ime, e-pošta, geslo.</p>
+        <p><span class="label">Izhodi:</span> uspešna registracija, prijava, uporabniški podatki, avtentikacijski žeton ali seja.</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Upravljanje uporabniškega profila</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik hrani in posodablja osebne podatke uporabnika, cilje in nastavitve aplikacije.</p>
+        <p><span class="label">Vhodi:</span> podatki profila, cilji, nastavitve opomnikov.</p>
+        <p><span class="label">Izhodi:</span> posodobljen profil uporabnika in potrditveni odgovor.</p>
+    </div>
+
+    <div class="section">
+        <h2>3. Shranjevanje in upravljanje treningov</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik sprejema, shranjuje, posodablja in briše zapise treningov.</p>
+        <p><span class="label">Vhodi:</span> tip treninga, trajanje, datum, porabljene kalorije, opombe.</p>
+        <p><span class="label">Izhodi:</span> seznam treningov, potrditve o shranjevanju ali posodobitvi.</p>
+    </div>
+
+    <div class="section">
+        <h2>4. Shranjevanje prehranskih podatkov</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik upravlja evidence obrokov, kalorij in osnovnih prehranskih podatkov.</p>
+        <p><span class="label">Vhodi:</span> naziv obroka, kalorije, makrohranila, čas vnosa.</p>
+        <p><span class="label">Izhodi:</span> potrjeni prehranski zapisi in pregled zgodovine obrokov.</p>
+    </div>
+
+    <div class="section">
+        <h2>5. Shranjevanje podatkov o hidraciji</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik beleži dnevni vnos vode in omogoča pregled hidracije uporabnika.</p>
+        <p><span class="label">Vhodi:</span> količina vode, datum in čas vnosa.</p>
+        <p><span class="label">Izhodi:</span> dnevni ali tedenski pregled hidracije.</p>
+    </div>
+
+    <div class="section">
+        <h2>6. Upravljanje opomnikov</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik hrani pravila za opomnike ter posreduje nastavitve odjemalcu.</p>
+        <p><span class="label">Vhodi:</span> vrsta opomnika, čas, pogostost, status vklopa/izklopa.</p>
+        <p><span class="label">Izhodi:</span> seznam aktivnih opomnikov in potrditve o spremembah.</p>
+    </div>
+
+    <div class="section">
+        <h2>7. Sinhronizacija offline podatkov</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik sprejme lokalno shranjene podatke iz odjemalca, ko je povezava ponovno vzpostavljena.</p>
+        <p><span class="label">Vhodi:</span> lokalni zapisi treningov, obrokov, hidracije, ciljev in navad.</p>
+        <p><span class="label">Izhodi:</span> uspešna sinhronizacija, posodobljeni podatki na strežniku, odgovor o morebitnih konfliktih.</p>
+    </div>
+
+    <div class="section">
+        <h2>8. Analiza napredka</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik pripravlja agregirane podatke za statistiko in analizo napredka.</p>
+        <p><span class="label">Vhodi:</span> zgodovina treningov, prehrane, hidracije in ciljev.</p>
+        <p><span class="label">Izhodi:</span> izračuni, povzetki, statistični podatki in pripravljeni podatki za grafe.</p>
+    </div>
+
+    <div class="section">
+        <h2>9. Upravljanje baze podatkov</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik skrbi za trajno hrambo vseh ključnih podatkov in njihovo pravilno povezovanje.</p>
+        <p><span class="label">Vhodi:</span> vsi podatki, ki jih pošilja odjemalec.</p>
+        <p><span class="label">Izhodi:</span> shranjeni in urejeni podatki v podatkovni bazi.</p>
+    </div>
+
+    <div class="section">
+        <h2>10. Varnost in preverjanje podatkov</h2>
+        <p><span class="label">Kaj omogoča:</span> Strežnik preverja pravilnost vhodnih podatkov, omejuje nepooblaščen dostop in zagotavlja varnost komunikacije.</p>
+        <p><span class="label">Vhodi:</span> vsi zahtevki uporabnikov in njihovi podatki.</p>
+        <p><span class="label">Izhodi:</span> varen odgovor strežnika, zavrnitev napačnih ali nepooblaščenih zahtevkov.</p>
+    </div>
+
+    <div class="section">
+        <h2>UML diagram primerov uporabe strežnika</h2>
+        <p>
+            Spodnja slika prikazuje glavne funkcionalnosti strežnika ter povezavo med uporabnikom,
+            strežnikom in podatki, ki jih sistem obdeluje.
+        </p>
+        <img src="/uml_diagram.png" alt="UML diagram strežnika">
+    </div>
+
+</body>
+</html>
