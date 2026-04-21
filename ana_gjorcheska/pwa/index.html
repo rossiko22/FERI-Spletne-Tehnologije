@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Buddy PWA</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>Fitness Buddy</h1>
+        <p>Upravljanje treningov, navad in obrokov</p>
+    </header>
+
+    <nav>
+        <button id="showWorkoutsBtn">Workouts</button>
+        <button id="showHabitsBtn">Habits</button>
+        <button id="showMealsBtn">Meals</button>
+    </nav>
+
+    <main>
+        <section class="controls">
+            <input type="text" id="searchInput" placeholder="Iskanje...">
+            <button id="refreshBtn">Osveži</button>
+        </section>
+
+        <section class="form-section">
+            <h2 id="formTitle">Dodaj workout</h2>
+            <form id="dataForm">
+                <input type="hidden" id="editIndex">
+
+                <input type="text" id="field1" placeholder="Naziv / tip" required>
+                <input type="text" id="field2" placeholder="Trajanje / cilj / kalorije" required>
+                <button type="submit">Shrani</button>
+            </form>
+        </section>
+
+        <section class="image-section">
+            <img data-src="images/workout.jpg" alt="Workout" class="lazy-image" width="300">
+            <img data-src="images/habit.jpg" alt="Habit" class="lazy-image" width="300">
+            <img data-src="images/meal.jpg" alt="Meal" class="lazy-image" width="300">
+        </section>
+
+        <section>
+            <h2 id="listTitle">Seznam workouts</h2>
+            <ul id="dataList"></ul>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
