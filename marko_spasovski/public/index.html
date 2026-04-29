@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="theme-color" content="#6c63ff"/>
+    <meta name="description" content="FitnessBuddy - sledite treningom, navadam in obrokom"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <meta name="apple-mobile-web-app-title" content="FitnessBuddy"/>
+    <link rel="manifest" href="/manifest.json"/>
+    <link rel="apple-touch-icon" href="/icons/icon-192.svg"/>
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg"/>
+    <link rel="stylesheet" href="/styles.css"/>
+    <title>FitnessBuddy</title>
+</head>
+<body>
+
+<!-- Offline banner -->
+<div id="offline-banner">⚠️ Brez povezave — podatki se bodo sinhronizirali ob vzpostavitvi povezave</div>
+
+<!-- Header -->
+<header id="app-header">
+    <div class="header-logo">
+        <img src="/icons/icon-192.svg" alt="FitnessBuddy logo" width="36" height="36"/>
+        <h1>FitnessBuddy</h1>
+    </div>
+    <div class="header-actions">
+        <div class="header-hint">
+            <span><kbd>N</kbd> novo</span>
+            <span><kbd>R</kbd> osveži</span>
+            <span><kbd>/</kbd> iskanje</span>
+            <span><kbd>1–4</kbd> zavihki</span>
+            <span><kbd>Ctrl+M</kbd> glas</span>
+        </div>
+        <button class="icon-btn" id="btn-voice" title="Glasovni ukazi (Ctrl+M)">🎤</button>
+        <button class="icon-btn" id="btn-push" title="Push obvestila">🔔</button>
+        <button class="icon-btn" id="btn-sync" title="Sinhroniziraj">🔄</button>
+        <button class="icon-btn" id="btn-help" title="Pomoč / bližnjice (?)">❓</button>
+    </div>
+</header>
+
+<!-- Status bar -->
+<div id="status-bar">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="status-text">Vzpostavljanje povezave...</span>
+    <span id="pending-indicator"></span>
+</div>
+
+<!-- Navigation tabs -->
+<nav id="nav-tabs" role="tablist">
+    <button class="tab-btn active" data-tab="workouts" role="tab" aria-selected="true">🏋️ Treningi</button>
+    <button class="tab-btn" data-tab="habits" role="tab">✅ Navade</button>
+    <button class="tab-btn" data-tab="meals" role="tab">🥗 Obroki</button>
+    <button class="tab-btn" data-tab="users" role="tab">👤 Uporabniki</button>
+    <button class="tab-btn" data-tab="push" role="tab">📢 Push</button>
+</nav>
+
+<!-- Search bar -->
+<div id="search-bar">
+    <input type="text" id="search-input" placeholder="Iskanje..." aria-label="Iskanje"/>
+    <button class="btn-clear-search" id="btn-clear-search" title="Počisti iskanje">✕ Počisti</button>
+</div>
+
+<!-- Main content -->
+<main id="main-content">
+
+    <!-- Workouts tab -->
+    <div id="tab-workouts" class="tab-panel active" role="tabpanel">
+        <div class="section-header">
+            <span class="section-title">🏋️ Treningi <span class="item-count" id="count-workouts">0</span></span>
+            <button class="btn btn-primary" id="btn-new-workout">+ Novi trening</button>
+        </div>
+        <div id="loader-workouts" class="loader"><div class="spinner"></div></div>
+        <div id="list-workouts" class="cards-grid"></div>
+    </div>
+
+    <!-- Habits tab -->
+    <div id="tab-habits" class="tab-panel" role="tabpanel">
+        <div class="section-header">
+            <span class="section-title">✅ Navade <span class="item-count" id="count-habits">0</span></span>
+            <button class="btn btn-primary" id="btn-new-habit">+ Nova navada</button>
+        </div>
+        <div id="loader-habits" class="loader"><div class="spinner"></div></div>
+        <div id="list-habits" class="cards-grid"></div>
+    </div>
+
+    <!-- Meals tab -->
+    <div id="tab-meals" class="tab-panel" role="tabpanel">
+        <div class="section-header">
+            <span class="section-title">🥗 Obroki <span class="item-count" id="count-meals">0</span></span>
+            <button class="btn btn-primary" id="btn-new-meal">+ Nov obrok</button>
+        </div>
+        <div id="loader-meals" class="loader"><div class="spinner"></div></div>
+        <div id="list-meals" class="cards-grid"></div>
+    </div>
+
+    <!-- Users tab -->
+    <div id="tab-users" class="tab-panel" role="tabpanel">
+        <div class="section-header">
+            <span class="section-title">👤 Uporabniki <span class="item-count" id="count-users">0</span></span>
+            <button class="btn btn-primary" id="btn-new-user">+ Nov uporabnik</button>
+        </div>
+        <div id="loader-users" class="loader"><div class="spinner"></div></div>
+        <div id="list-users" class="cards-grid"></div>
+    </div>
+
+    <!-- Push tab -->
+    <div id="tab-push" class="tab-panel" role="tabpanel">
+        <div id="push-section">
+            <h3>📢 Push obvestila</h3>
+            <p style="color:var(--text-muted);font-size:0.875rem;margin-bottom:1rem;">
+                Pošljite push obvestilo vsem naročenim napravam.
+            </p>
+            <div class="form-group">
+                <label>Naslov obvestila</label>
+                <input type="text" id="push-title" class="form-control" placeholder="FitnessBuddy" value="FitnessBuddy"/>
+            </div>
+            <div class="form-group">
+                <label>Sporočilo</label>
+                <input type="text" id="push-body" class="form-control" placeholder="Čas za trening!"/>
+            </div>
+            <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                <button class="btn btn-primary" id="btn-send-push">📤 Pošlji obvestilo</button>
+                <button class="btn btn-ghost" id="btn-subscribe-push">🔔 Naroči se na push</button>
+            </div>
+            <div id="push-status" style="margin-top:1rem;font-size:0.85rem;color:var(--text-muted);"></div>
+        </div>
+
+        <div id="voice-help">
+            <h3>🎤 Glasovni ukazi — recite:</h3>
+            <div class="voice-commands-list">
+                <div class="voice-cmd"><span>"pokaži treninge"</span><span>→ zavihek Treningi</span></div>
+                <div class="voice-cmd"><span>"pokaži navade"</span><span>→ zavihek Navade</span></div>
+                <div class="voice-cmd"><span>"pokaži obroke"</span><span>→ zavihek Obroki</span></div>
+                <div class="voice-cmd"><span>"pokaži uporabnike"</span><span>→ zavihek Uporabniki</span></div>
+                <div class="voice-cmd"><span>"dodaj novo"</span><span>→ odpri formo</span></div>
+                <div class="voice-cmd"><span>"iskanje [beseda]"</span><span>→ išči</span></div>
+                <div class="voice-cmd"><span>"osveži"</span><span>→ naloži podatke</span></div>
+                <div class="voice-cmd"><span>"zapri"</span><span>→ zapri okno</span></div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<!-- FAB -->
+<button id="fab" title="Dodaj novo" aria-label="Dodaj novo">+</button>
+
+<!-- Voice indicator -->
+<div id="voice-indicator">
+    <div class="voice-dot"></div>
+    <span id="voice-text">Poslušam...</span>
+</div>
+
+<!-- Modal overlay -->
+<div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="modal-title">Dodaj</h2>
+            <button class="btn-close" id="btn-modal-close" aria-label="Zapri">✕</button>
+        </div>
+        <div class="modal-body">
+            <form id="item-form" novalidate>
+                <div id="form-fields"></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-ghost" id="btn-form-cancel">Prekliči</button>
+                    <button type="submit" class="btn btn-primary" id="btn-form-submit">Shrani</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" aria-live="polite"></div>
+
+<!-- Help / shortcuts modal -->
+<div id="help-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal help-modal">
+        <div class="modal-header">
+            <h2 id="help-title">Pomoč — bližnjice in ukazi</h2>
+            <button class="btn-close" id="btn-help-close" aria-label="Zapri">✕</button>
+        </div>
+        <div class="modal-body help-body">
+
+            <section class="help-section">
+                <h3 class="help-section-title">⌨️ Tipkovne bližnjice</h3>
+                <div class="help-grid">
+                    <div class="help-row"><kbd>N</kbd><span>Dodaj nov vnos za aktiven zavihek</span></div>
+                    <div class="help-row"><kbd>R</kbd><span>Osveži podatke trenutnega zavihka</span></div>
+                    <div class="help-row"><kbd>/</kbd><span>Fokusiraj iskalno polje</span></div>
+                    <div class="help-row"><kbd>1</kbd> – <kbd>4</kbd><span>Preklopi zavihek (Treningi / Navade / Obroki / Uporabniki)</span></div>
+                    <div class="help-row"><kbd>Escape</kbd><span>Zapri odprto okno ali formo</span></div>
+                    <div class="help-row"><kbd>Ctrl</kbd>+<kbd>M</kbd><span>Vklopi / izklopi glasovno prepoznavanje</span></div>
+                    <div class="help-row"><kbd>?</kbd><span>Prikaži to okno s pomočjo</span></div>
+                </div>
+            </section>
+
+            <section class="help-section">
+                <h3 class="help-section-title">🎤 Glasovni ukazi <span class="help-lang">( slovensko ali angleško )</span></h3>
+                <p class="help-hint">Kliknite <strong>🎤</strong> v glavi strani ali pritisnite <kbd>Ctrl+M</kbd>, nato izgovorite ukaz.</p>
+                <div class="help-grid">
+                    <div class="help-row"><span class="voice-kw">"pokaži treninge"</span><span>Odpre zavihek Treningi</span></div>
+                    <div class="help-row"><span class="voice-kw">"pokaži navade"</span><span>Odpre zavihek Navade</span></div>
+                    <div class="help-row"><span class="voice-kw">"pokaži obroke"</span><span>Odpre zavihek Obroki</span></div>
+                    <div class="help-row"><span class="voice-kw">"pokaži uporabnike"</span><span>Odpre zavihek Uporabniki</span></div>
+                    <div class="help-row"><span class="voice-kw">"dodaj novo"</span><span>Odpre formo za dodajanje</span></div>
+                    <div class="help-row"><span class="voice-kw">"iskanje [beseda]"</span><span>Filtrira seznam po besedi</span></div>
+                    <div class="help-row"><span class="voice-kw">"osveži"</span><span>Naloži podatke znova</span></div>
+                    <div class="help-row"><span class="voice-kw">"zapri"</span><span>Zapre odprto okno</span></div>
+                    <div class="help-row"><span class="voice-kw">"sinhroniziraj"</span><span>Sproži sinhronizacijo</span></div>
+                    <div class="help-row"><span class="voice-kw">"pošlji obvestilo"</span><span>Odpre zavihek Push</span></div>
+                </div>
+                <p class="help-hint" style="margin-top:0.75rem">Aplikacija glasovno potrdi vsak prepoznan ukaz.</p>
+            </section>
+
+        </div>
+    </div>
+</div>
+
+<script src="/db-local.js"></script>
+<script src="/app.js"></script>
+<script src="/voice.js"></script>
+</body>
+</html>
