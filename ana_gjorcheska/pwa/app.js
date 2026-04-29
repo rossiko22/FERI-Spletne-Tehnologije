@@ -38,6 +38,7 @@ const editIndex = document.getElementById('editIndex');
 const searchInput = document.getElementById('searchInput');
 const formTitle = document.getElementById('formTitle');
 const listTitle = document.getElementById('listTitle');
+const resourceImage = document.getElementById('resourceImage');
 
 document.getElementById('showWorkoutsBtn').addEventListener('click', () => switchResource('workouts'));
 document.getElementById('showHabitsBtn').addEventListener('click', () => switchResource('habits'));
@@ -57,7 +58,9 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-searchInput.addEventListener('input', renderList);
+searchInput.addEventListener('input', () => {
+    fetchData(searchInput.value);
+});
 
 function switchResource(resource) {
     currentResource = resource;
@@ -69,28 +72,45 @@ function switchResource(resource) {
         listTitle.textContent = 'Seznam workouts';
         field1.placeholder = 'Tip treninga';
         field2.placeholder = 'Trajanje';
+
+        resourceImage.setAttribute('src', 'images/workout.jpg');
+        resourceImage.setAttribute('alt', 'Workout');
     } else if (resource === 'habits') {
         formTitle.textContent = 'Dodaj habit';
         listTitle.textContent = 'Seznam habits';
         field1.placeholder = 'Naziv navade';
         field2.placeholder = 'Cilj';
+
+        resourceImage.setAttribute('src', 'images/habit.jpg');
+        resourceImage.setAttribute('alt', 'Habit');
     } else if (resource === 'meals') {
         formTitle.textContent = 'Dodaj meal';
         listTitle.textContent = 'Seznam meals';
         field1.placeholder = 'Naziv obroka';
         field2.placeholder = 'Kalorije';
+
+        resourceImage.setAttribute('src', 'images/meal.jpg');
+        resourceImage.setAttribute('alt', 'Meal');
     }
 
+    console.log('Slika:', resourceImage.src);
     fetchData();
+   
 }
 
-async function fetchData() {
+async function fetchData(query = '') {
     try {
         if (!accessToken) {
             await getToken();
         }
 
-        const response = await fetch(`${API_BASE}/${currentResource}`, {
+        let url = `${API_BASE}/${currentResource}`;
+
+        if (query) {
+            url += `?q=${encodeURIComponent(query)}`;
+        }
+
+        const response = await fetch(url, {
             headers: getAuthHeaders()
         });
 
@@ -100,11 +120,7 @@ async function fetchData() {
 
         const data = await response.json();
 
-        if (!Array.isArray(data)) {
-            currentData = [];
-        } else {
-            currentData = data;
-        }
+        currentData = Array.isArray(data) ? data : [];
 
         localStorage.setItem(currentResource, JSON.stringify(currentData));
         renderList();
@@ -130,8 +146,7 @@ async function showNotification(message) {
 
     if (Notification.permission === 'granted') {
         new Notification('Fitness Buddy', {
-            body: message,
-            icon: 'icons/icon-192.png'
+            body: message
         });
     }
 }
@@ -300,3 +315,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     switchResource('workouts');   // naloži začetne podatke
     setupLazyLoading();           // aktivira lazy loading slik
 });
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+            await navigator.serviceWorker.register('./service-worker.js');
+            console.log('Service Worker registriran');
+        } catch (error) {
+            console.error('Service Worker napaka:', error);
+        }
+    });
+}
