@@ -24,6 +24,7 @@ async function getToken() {
 
     const data = await res.json();
     accessToken = data.access_token;
+    console.log('TOKEN:', accessToken);
 }
 
 let currentResource = 'workouts';
@@ -85,16 +86,32 @@ function switchResource(resource) {
 
 async function fetchData() {
     try {
+        if (!accessToken) {
+            await getToken();
+        }
+
         const response = await fetch(`${API_BASE}/${currentResource}`, {
             headers: getAuthHeaders()
         });
+
+        if (!response.ok) {
+            throw new Error('HTTP error: ' + response.status);
+        }
+
         const data = await response.json();
 
-        currentData = data;
-        localStorage.setItem(currentResource, JSON.stringify(data));
+        if (!Array.isArray(data)) {
+            currentData = [];
+        } else {
+            currentData = data;
+        }
+
+        localStorage.setItem(currentResource, JSON.stringify(currentData));
         renderList();
         showNotification('Podatki uspešno pridobljeni.');
     } catch (error) {
+        console.error('Napaka pri pridobivanju:', error);
+
         const cached = localStorage.getItem(currentResource);
         currentData = cached ? JSON.parse(cached) : [];
         renderList();
