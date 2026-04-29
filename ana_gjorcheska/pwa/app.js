@@ -1,5 +1,31 @@
 const API_BASE = 'http://localhost:3000';
 
+let accessToken = '';
+
+function getAuthHeaders(extraHeaders = {}) {
+    return {
+        ...extraHeaders,
+        'Authorization': 'Bearer ' + accessToken
+    };
+}
+
+async function getToken() {
+    const res = await fetch(`${API_BASE}/oauth/token`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+            grant_type: 'client_credentials',
+            client_id: 'fitness-client',
+            client_secret: 'super-secret-client-key'
+        })
+    });
+
+    const data = await res.json();
+    accessToken = data.access_token;
+}
+
 let currentResource = 'workouts';
 let currentData = [];
 
@@ -16,6 +42,7 @@ document.getElementById('showWorkoutsBtn').addEventListener('click', () => switc
 document.getElementById('showHabitsBtn').addEventListener('click', () => switchResource('habits'));
 document.getElementById('showMealsBtn').addEventListener('click', () => switchResource('meals'));
 document.getElementById('refreshBtn').addEventListener('click', fetchData);
+
 
 document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 's') {
@@ -58,7 +85,9 @@ function switchResource(resource) {
 
 async function fetchData() {
     try {
-        const response = await fetch(`${API_BASE}/${currentResource}`);
+        const response = await fetch(`${API_BASE}/${currentResource}`, {
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
 
         currentData = data;
@@ -136,14 +165,14 @@ dataForm.addEventListener('submit', async (e) => {
         if (index === '') {
             await fetch(`${API_BASE}/${currentResource}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
             showNotification('Podatek uspešno shranjen.');
         } else {
             await fetch(`${API_BASE}/${currentResource}/${index}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify(payload)
             });
             showNotification('Podatek uspešno posodobljen.');
@@ -177,7 +206,8 @@ window.editItem = function(index) {
 window.deleteItem = async function(index) {
     try {
         await fetch(`${API_BASE}/${currentResource}/${index}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: getAuthHeaders()
         });
         showNotification('Podatek izbrisan.');
         fetchData();
@@ -215,7 +245,7 @@ async function syncOfflineActions() {
 
             await fetch(url, {
                 method: action.method,
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: action.payload ? JSON.stringify(action.payload) : undefined
             });
         } catch (error) {
@@ -248,7 +278,8 @@ function setupLazyLoading() {
     images.forEach(img => observer.observe(img));
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await getToken();
     switchResource('workouts');   // naloži začetne podatke
     setupLazyLoading();           // aktivira lazy loading slik
 });
