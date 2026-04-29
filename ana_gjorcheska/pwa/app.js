@@ -151,6 +151,62 @@ async function showNotification(message) {
     }
 }
 
+function handleVoiceCommand(command) {
+    if (command.includes('prikaži treninge') || command.includes('treningi')) {
+        switchResource('workouts');
+        speak('Prikazujem treninge.');
+    } 
+    else if (command.includes('prikaži rutine') || command.includes('rutine') || command.includes('navade')) {
+        switchResource('habits');
+        speak('Prikazujem rutine.');
+    } 
+    else if (command.includes('prikaži obroke') || command.includes('obroki')) {
+        switchResource('meals');
+        speak('Prikazujem obroke.');
+    } 
+    else if (command.includes('osveži') || command.includes('osveži podatke')) {
+        fetchData();
+        speak('Podatki so osveženi.');
+    } 
+    else if (command.includes('počisti iskanje')) {
+        searchInput.value = '';
+        fetchData();
+        speak('Iskanje je počiščeno.');
+    } 
+    else if (command.includes('shrani')) {
+        dataForm.requestSubmit();
+        speak('Shranjujem podatek.');
+    } 
+    else if (command.startsWith('išči ')) {
+        const query = command.replace('išči ', '').trim();
+        searchInput.value = query;
+        fetchData(query);
+        speak('Iščem ' + query);
+    } 
+    else {
+        speak('Ukaza nisem prepoznala.');
+    }
+}
+
+function speak(text) {
+    if (!('speechSynthesis' in window)) return;
+
+    if (recognition) {
+        recognition.stop(); 
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'sl-SI';
+
+    utterance.onend = () => {
+        if (recognition) {
+         //   recognition.start(); 
+        }
+    };
+
+    window.speechSynthesis.speak(utterance);
+}
+
 function renderList() {
     const query = searchInput.value.toLowerCase();
 
@@ -308,6 +364,82 @@ function setupLazyLoading() {
     });
 
     images.forEach(img => observer.observe(img));
+}
+
+const startVoiceBtn = document.getElementById('startVoiceBtn');
+const stopVoiceBtn = document.getElementById('stopVoiceBtn');
+const voiceStatus = document.getElementById('voiceStatus');
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let recognition = null;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'sl-SI';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+        voiceStatus.textContent = 'Glasovno upravljanje je aktivno.';
+   
+    };
+
+    recognition.onend = () => {
+        voiceStatus.textContent = 'Glasovno upravljanje ni aktivno.';
+    };
+
+    recognition.onerror = (event) => {
+        voiceStatus.textContent = 'Napaka pri prepoznavanju govora.';
+        console.error('Speech recognition error:', event.error);
+    };
+
+    recognition.onresult = (event) => {
+        const lastResult = event.results[event.results.length - 1][0].transcript;
+        const command = lastResult.toLowerCase().trim();
+
+        console.log('Slišano:', command);
+
+        const recognized = handleVoiceCommand(command);
+
+        if (recognized) {
+            voiceStatus.textContent = 'Prepoznan ukaz: ' + command;
+        } else {
+            voiceStatus.textContent = 'Ukaz ni prepoznan.';
+        }
+
+        recognition.stop();
+
+        if (recognitionTimeout) {
+            clearTimeout(recognitionTimeout);
+        }
+    };
+
+    startVoiceBtn.addEventListener('click', () => {
+        if (!recognition) return;
+
+        recognition.start();
+        voiceStatus.textContent = 'Poslušam... (5s)';
+
+        recognitionTimeout = setTimeout(() => {
+            recognition.stop();
+            voiceStatus.textContent = 'Poslušanje zaključeno.';
+        }, 5000);
+    });
+
+    stopVoiceBtn.addEventListener('click', () => {
+        if (!recognition) return;
+
+        recognition.stop();
+
+        if (recognitionTimeout) {
+            clearTimeout(recognitionTimeout);
+        }
+
+        voiceStatus.textContent = 'Glasovno upravljanje ustavljeno.';
+    });
+} else {
+    voiceStatus.textContent = 'Brskalnik ne podpira Web Speech API.';
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

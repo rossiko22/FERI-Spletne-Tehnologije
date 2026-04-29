@@ -67,3 +67,14 @@ li {
     background: #ddd;
     min-height: 180px;
 }
+
+.voice-section {
+    margin: 20px 0;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+}
+
+.voice-section button {
+    margin-right: 8px;
+}
