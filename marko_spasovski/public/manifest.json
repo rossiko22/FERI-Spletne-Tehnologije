@@ -1,0 +1,44 @@
+{
+  "name": "FitnessBuddy - Vaš fitnes pomočnik",
+  "short_name": "FitnessBuddy",
+  "description": "Sledite treningom, navadam in obrokom. Vaš osebni digitalni fitnes trener.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f0f1a",
+  "theme_color": "#6c63ff",
+  "lang": "sl",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Novi trening",
+      "short_name": "Trening",
+      "description": "Dodaj nov trening",
+      "url": "/?tab=workouts&action=new",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Nova navada",
+      "short_name": "Navada",
+      "description": "Dodaj novo navado",
+      "url": "/?tab=habits&action=new",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": []
+}
