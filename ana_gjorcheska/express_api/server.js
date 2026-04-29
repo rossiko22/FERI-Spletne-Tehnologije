@@ -65,6 +65,16 @@ function authMiddleware(req, res, next) {
     next();
 }
 
+function filterData(data, query) {
+    if (!query) return data;
+
+    const q = query.toLowerCase();
+
+    return data.filter(item =>
+        JSON.stringify(item).toLowerCase().includes(q)
+    );
+}
+
 // =====================
 // OAuth 2.0 token endpoint
 // =====================
@@ -118,7 +128,8 @@ let meals = [];
 
 // WORKOUTS
 app.get('/workouts', authMiddleware, (req, res) => {
-    res.json(workouts);
+    const filtered = filterData(workouts, req.query.q);
+    res.json(filtered);
 });
 
 app.post('/workouts', authMiddleware, (req, res) => {
@@ -150,7 +161,8 @@ app.delete('/workouts/:id', authMiddleware, (req, res) => {
 
 // HABITS
 app.get('/habits', authMiddleware, (req, res) => {
-    res.json(habits);
+    const filtered = filterData(habits, req.query.q);
+    res.json(filtered);
 });
 
 app.post('/habits', authMiddleware, (req, res) => {
@@ -182,7 +194,8 @@ app.delete('/habits/:id', authMiddleware, (req, res) => {
 
 // HABIT LOGS
 app.get('/habitlogs', authMiddleware, (req, res) => {
-    res.json(habitlogs);
+    const filtered = filterData(habitlogs, req.query.q);
+    res.json(filtered);
 });
 
 app.post('/habitlogs', authMiddleware, (req, res) => {
@@ -214,7 +227,8 @@ app.delete('/habitlogs/:id', authMiddleware, (req, res) => {
 
 // MEALS
 app.get('/meals', authMiddleware, (req, res) => {
-    res.json(meals);
+    const filtered = filterData(meals, req.query.q);
+    res.json(filtered);
 });
 
 app.post('/meals', authMiddleware, (req, res) => {
@@ -242,6 +256,18 @@ app.delete('/meals/:id', authMiddleware, (req, res) => {
 
     meals.splice(id, 1);
     res.status(204).send();
+});
+
+app.post('/notifications/send', authMiddleware, (req, res) => {
+    const { title, body } = req.body;
+
+    res.json({
+        message: 'Push notification endpoint deluje',
+        notification: {
+            title: title || 'Fitness Buddy',
+            body: body || 'Novo obvestilo iz strežnika'
+        }
+    });
 });
 
 app.listen(3000, () => {
