@@ -6,10 +6,16 @@ const loginBtn = document.getElementById('loginBtn');
 const addWorkoutBtn = document.getElementById('addWorkoutBtn');
 const searchInput = document.getElementById('searchInput');
 const workoutsContainer = document.getElementById('workoutsContainer');
+const voiceBtn = document.getElementById('voiceBtn');
+const voiceStatus = document.getElementById('voiceStatus');
 
 loginBtn.addEventListener('click', login);
 addWorkoutBtn.addEventListener('click', addWorkout);
 searchInput.addEventListener('input', loadWorkouts);
+
+if (voiceBtn) {
+    voiceBtn.addEventListener('click', startVoiceRecognition);
+}
 
 window.addEventListener('load', () => {
     requestNotificationPermission();
@@ -22,6 +28,7 @@ window.addEventListener('load', () => {
 
 window.addEventListener('online', () => {
     showNotification('Fitness Buddy', 'Povezava je ponovno vzpostavljena.');
+    speak('Povezava je ponovno vzpostavljena.');
     syncOfflineWorkouts();
 });
 
@@ -38,6 +45,102 @@ document.addEventListener('keydown', (event) => {
         searchInput.focus();
     }
 });
+
+// GLASOVNO UPRAVLJANJE
+function startVoiceRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+        updateVoiceStatus('Brskalnik ne podpira prepoznave govora.');
+        speak('Brskalnik ne podpira prepoznave govora.');
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'sl-SI';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    updateVoiceStatus('Poslušam glasovni ukaz...');
+    
+
+    recognition.start();
+
+    recognition.onresult = (event) => {
+        const command = event.results[0][0].transcript.toLowerCase().trim();
+        updateVoiceStatus(`Prepoznan ukaz: ${command}`);
+        handleVoiceCommand(command);
+    };
+
+    recognition.onerror = () => {
+        updateVoiceStatus('Napaka pri prepoznavi govora.');
+        speak('Ukaza nisem razumela.');
+    };
+
+    recognition.onend = () => {
+        console.log('Glasovno poslušanje zaključeno.');
+    };
+}
+
+function handleVoiceCommand(command) {
+   if (
+    command.includes('prikaži treninge') ||
+    command.includes('prikazi treninge') ||
+    command.includes('pokaži treninge') ||
+    command.includes('pokazi treninge') ||
+    command.includes('prikaži') ||
+    command.includes('prikazi') ||
+    command.includes('treninge') ||
+    command.includes('trening')
+) {
+    loadWorkouts();
+    speak('Prikazujem treninge.');
+    return;
+}
+
+    if (command.includes('išči cardio') || command.includes('isci cardio') || command.includes('išči kardio')) {
+        searchInput.value = 'cardio';
+        loadWorkouts();
+        speak('Iščem cardio treninge.');
+        return;
+    }
+
+    if (command.includes('počisti obrazec') || command.includes('pocisti obrazec')) {
+        clearForm();
+        speak('Obrazec je počiščen.');
+        return;
+    }
+
+   if (
+    command.includes('fokus iskanje') ||
+    command.includes('iskanje') ||
+    command.includes('išči') ||
+    command.includes('isci') ||
+    command.includes('išče') ||
+    command.includes('isce')
+) {
+    searchInput.focus();
+    speak('Fokus je na iskanju.');
+    return;
+}
+
+    updateVoiceStatus('Ukaz ni prepoznan.');
+    speak('Ukaz ni prepoznan.');
+}
+
+function updateVoiceStatus(message) {
+    if (voiceStatus) {
+        voiceStatus.textContent = message;
+    }
+}
+
+function speak(text) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'sl-SI';
+        window.speechSynthesis.speak(utterance);
+    }
+}
 
 async function login() {
     const username = document.getElementById('username').value;
@@ -60,6 +163,7 @@ async function login() {
 
         if (!response.ok) {
             showNotification('Napaka', data.message || 'Prijava ni uspela.');
+            speak('Prijava ni uspela.');
             return;
         }
 
@@ -67,10 +171,12 @@ async function login() {
         localStorage.setItem('accessToken', accessToken);
 
         showNotification('Prijava uspešna', 'Access token je bil shranjen.');
+        speak('Prijava je uspešna.');
         loadWorkouts();
 
     } catch (error) {
         showNotification('Napaka', 'Strežnik trenutno ni dosegljiv.');
+        speak('Strežnik trenutno ni dosegljiv.');
     }
 }
 
@@ -102,6 +208,7 @@ async function loadWorkouts() {
         const localData = JSON.parse(localStorage.getItem('workouts')) || [];
         renderWorkouts(localData);
         showNotification('Offline način', 'Prikazani so lokalno shranjeni podatki.');
+        speak('Prikazani so lokalno shranjeni podatki.');
     }
 }
 
@@ -171,16 +278,19 @@ async function addWorkout() {
 
         if (!response.ok) {
             showNotification('Napaka', data.message || 'Treninga ni bilo mogoče dodati.');
+            speak('Treninga ni bilo mogoče dodati.');
             return;
         }
 
         showNotification('Uspeh', 'Trening je bil uspešno dodan.');
+        speak('Trening je bil uspešno dodan.');
         clearForm();
         loadWorkouts();
 
     } catch (error) {
         saveOfflineWorkout(workout);
         showNotification('Offline način', 'Trening je shranjen lokalno in bo sinhroniziran pozneje.');
+        speak('Trening je shranjen lokalno.');
         clearForm();
     }
 }
@@ -208,14 +318,17 @@ async function editWorkout(id) {
 
         if (!response.ok) {
             showNotification('Napaka', data.message || 'Treninga ni bilo mogoče posodobiti.');
+            speak('Treninga ni bilo mogoče posodobiti.');
             return;
         }
 
         showNotification('Uspeh', 'Trening je bil uspešno posodobljen.');
+        speak('Trening je bil uspešno posodobljen.');
         loadWorkouts();
 
     } catch (error) {
         showNotification('Napaka', 'Posodobitev ni uspela.');
+        speak('Posodobitev ni uspela.');
     }
 }
 
@@ -236,14 +349,17 @@ async function deleteWorkout(id) {
 
         if (!response.ok) {
             showNotification('Napaka', data.message || 'Treninga ni bilo mogoče izbrisati.');
+            speak('Treninga ni bilo mogoče izbrisati.');
             return;
         }
 
         showNotification('Uspeh', 'Trening je bil uspešno izbrisan.');
+        speak('Trening je bil uspešno izbrisan.');
         loadWorkouts();
 
     } catch (error) {
         showNotification('Napaka', 'Brisanje ni uspelo.');
+        speak('Brisanje ni uspelo.');
     }
 }
 
@@ -297,6 +413,7 @@ async function syncOfflineWorkouts() {
 
     localStorage.removeItem('offlineWorkouts');
     showNotification('Sinhronizacija', 'Lokalni podatki so bili uspešno sinhronizirani.');
+    speak('Lokalni podatki so bili sinhronizirani.');
     loadWorkouts();
 }
 

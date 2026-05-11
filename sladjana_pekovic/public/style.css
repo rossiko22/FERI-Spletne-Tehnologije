@@ -99,3 +99,27 @@ button:hover {
 .edit-btn:hover {
     background-color: #d97706;
 }
+
+.voice-section ul {
+    margin-top: 15px;
+    margin-left: 20px;
+    margin-bottom: 15px;
+}
+
+.voice-section li {
+    margin-bottom: 8px;
+}
+
+#voiceBtn {
+    background-color: #16a34a;
+}
+
+#voiceBtn:hover {
+    background-color: #15803d;
+}
+
+#voiceStatus {
+    margin-top: 10px;
+    font-weight: bold;
+    color: #1e3a8a;
+}
