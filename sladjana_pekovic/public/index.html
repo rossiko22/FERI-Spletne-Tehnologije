@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Fitness Buddy PWA</title>
+
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+
+    <meta name="theme-color" content="#2563eb">
+</head>
+<body>
+
+    <header>
+        <h1>Fitness Buddy</h1>
+        <p>PWA aplikacija za upravljanje treningov</p>
+    </header>
+
+    <main>
+
+        <section class="login-section">
+            <h2>Prijava</h2>
+
+            <input type="text" id="username" placeholder="Uporabniško ime">
+            <input type="password" id="password" placeholder="Geslo">
+
+            <button id="loginBtn">Prijava</button>
+        </section>
+
+        <section class="controls-section">
+            <h2>Dodaj trening</h2>
+
+            <input type="text" id="title" placeholder="Naslov treninga">
+            <input type="text" id="type" placeholder="Vrsta treninga">
+            <input type="number" id="duration" placeholder="Trajanje (min)">
+            <input type="number" id="calories" placeholder="Kalorije">
+
+            <button id="addWorkoutBtn">Dodaj trening</button>
+
+            <h2>Iskanje</h2>
+
+            <input type="text" id="searchInput" placeholder="Išči treninge...">
+        </section>
+
+        <section>
+            <h2>Seznam treningov</h2>
+
+            <div id="workoutsContainer"></div>
+        </section>
+
+    </main>
+
+    <script src="app.js"></script>
+
+</body>
+</html>

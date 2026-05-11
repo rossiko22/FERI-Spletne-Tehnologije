@@ -1,10 +1,27 @@
 const express = require('express');
 const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
 const PORT = 3001;
 
 app.use(express.json());
+
+// CORS nastavitev
+app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+
+    next();
+});
+
+// Statične datoteke PWA aplikacije
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Začasni uporabnik v pomnilniku
 const users = [
@@ -25,15 +42,29 @@ let workouts = [
         title: 'Trening nog',
         type: 'fitness',
         duration: 60,
-        calories: 350
+        calories: 350,
+        image: '/images/workout1.svg'
+    },
+    {
+        id: 2,
+        title: 'Jutranji tek',
+        type: 'cardio',
+        duration: 30,
+        calories: 220,
+        image: '/images/workout2.svg'
     }
 ];
 
-let nextWorkoutId = 2;
+let nextWorkoutId = 3;
+
+// Shranjene push naročnine
+let pushSubscriptions = [];
 
 // Osnovna pot
-app.get('/', (req, res) => {
-    res.send('REST API strežnik za Fitness Buddy z OAuth 2.0 avtentikacijo deluje.');
+app.get('/api/status', (req, res) => {
+    res.json({
+        message: 'REST API strežnik za Fitness Buddy PWA deluje.'
+    });
 });
 
 // OAuth 2.0 token endpoint
@@ -106,7 +137,18 @@ function authenticateToken(req, res, next) {
 
 // GET - pridobi vse treninge
 app.get('/workouts', authenticateToken, (req, res) => {
-    res.json(workouts);
+    const search = req.query.search ? req.query.search.toLowerCase() : '';
+
+    if (!search) {
+        return res.json(workouts);
+    }
+
+    const filteredWorkouts = workouts.filter(workout =>
+        workout.title.toLowerCase().includes(search) ||
+        workout.type.toLowerCase().includes(search)
+    );
+
+    res.json(filteredWorkouts);
 });
 
 // GET - pridobi en trening po ID
@@ -136,7 +178,8 @@ app.post('/workouts', authenticateToken, (req, res) => {
         title,
         type,
         duration,
-        calories: calories || 0
+        calories: calories || 0,
+        image: '/images/workout1.svg'
     };
 
     workouts.push(newWorkout);
@@ -186,6 +229,31 @@ app.delete('/workouts/:id', authenticateToken, (req, res) => {
     });
 });
 
+// Endpoint za shranjevanje push naročnine
+app.post('/push/subscribe', authenticateToken, (req, res) => {
+    const subscription = req.body;
+
+    pushSubscriptions.push(subscription);
+
+    res.status(201).json({
+        message: 'Push naročnina je bila uspešno shranjena.'
+    });
+});
+
+// Testni endpoint za push obvestilo
+app.post('/push/send', authenticateToken, (req, res) => {
+    const { title, body } = req.body;
+
+    res.json({
+        message: 'Testno potisno sporočilo je bilo pripravljeno.',
+        notification: {
+            title: title || 'Fitness Buddy',
+            body: body || 'Novo obvestilo iz strežnika.'
+        },
+        subscriptionsCount: pushSubscriptions.length
+    });
+});
+
 app.listen(PORT, () => {
-    console.log(`REST API strežnik z OAuth 2.0 avtentikacijo deluje na http://localhost:${PORT}`);
+    console.log(`Fitness Buddy PWA strežnik deluje na http://localhost:${PORT}`);
 });
