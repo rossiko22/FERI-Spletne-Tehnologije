@@ -1,0 +1,31 @@
+// Goals CRUD + progress updates.
+// OWNER: Sladjana.
+//
+//   GET    /api/goals                  list
+//   POST   /api/goals                  { title, startDate, deadline, progress? }
+//   PUT    /api/goals/:id              update any field
+//   DELETE /api/goals/:id
+//
+const router = require('express').Router();
+const { body, param } = require('express-validator');
+
+const requireAuth = require('../../middleware/auth');
+const validate = require('../../middleware/validate');
+const c = require('./goals.controller');
+
+router.use(requireAuth);
+
+router.get('/', c.list);
+router.post(
+  '/',
+  body('title').isString().trim().isLength({ min: 1, max: 200 }),
+  body('startDate').optional().isISO8601(),
+  body('deadline').optional().isISO8601(),
+  body('progress').optional().isInt({ min: 0, max: 100 }),
+  validate,
+  c.create,
+);
+router.put('/:id', param('id').isUUID(), validate, c.update);
+router.delete('/:id', param('id').isUUID(), validate, c.remove);
+
+module.exports = router;
