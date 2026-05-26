@@ -1,10 +1,26 @@
-// Goals controller — skeleton. OWNER: Sladjana.
+// Goals controller. OWNER: Sladjana.
 const { v4: uuid } = require('uuid');
 const Goal = require('../../models/Goal');
 
 exports.list = async (req, res, next) => {
   try {
-    const items = await Goal.query().where({ user_id: req.user.id });
+    const items = await Goal.query()
+      .where({ user_id: req.user.id })
+      .orderBy('deadline', 'asc');
+    res.json({ items });
+  } catch (err) { next(err); }
+};
+
+exports.active = async (req, res, next) => {
+  try {
+    const items = await Goal.active(req.user.id);
+    res.json({ items });
+  } catch (err) { next(err); }
+};
+
+exports.overdue = async (req, res, next) => {
+  try {
+    const items = await Goal.overdue(req.user.id);
     res.json({ items });
   } catch (err) { next(err); }
 };
@@ -27,7 +43,6 @@ exports.update = async (req, res, next) => {
   try {
     const goal = await Goal.query().findOne({ id: req.params.id, user_id: req.user.id });
     if (!goal) return res.status(404).json({ error: 'not_found' });
-
     const allowed = { title: 'title', progress: 'progress', startDate: 'start_date', deadline: 'deadline' };
     const patch = {};
     for (const [key, column] of Object.entries(allowed)) {
