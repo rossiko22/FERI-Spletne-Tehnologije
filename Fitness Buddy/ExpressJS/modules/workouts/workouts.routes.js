@@ -1,12 +1,6 @@
 // Workouts CRUD. OWNER: Sladjana.
-//
-//   GET    /api/workouts                  list (?date=YYYY-MM-DD filter)
-//   POST   /api/workouts                  { name, sets, reps, duration, date? }
-//   DELETE /api/workouts/:id
-
 const router = require('express').Router();
-const { body, param } = require('express-validator');
-
+const { body, param, query } = require('express-validator');
 const requireAuth = require('../../middleware/auth');
 const validate = require('../../middleware/validate');
 const c = require('./workouts.controller');
@@ -14,6 +8,14 @@ const c = require('./workouts.controller');
 router.use(requireAuth);
 
 router.get('/', c.list);
+router.get(
+  '/stats',
+  query('from').optional().isISO8601(),
+  query('to').optional().isISO8601(),
+  validate,
+  c.stats,
+);
+
 router.post(
   '/',
   body('name').isString().trim().isLength({ min: 1, max: 120 }),
