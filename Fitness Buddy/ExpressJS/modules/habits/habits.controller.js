@@ -1,10 +1,4 @@
-// Habits controller — skeleton. OWNER: Sladjana.
-//
-// Notes for the implementer:
-//   - Every query must be scoped by req.user.id.
-//   - HabitLog rows are unique on (habit_id, date). Toggling is "find one
-//     for today; if exists delete it, else insert".
-
+// Habits controller. OWNER: Sladjana.
 const { v4: uuid } = require('uuid');
 const { Habit, HabitLog } = require('../../models/Habit');
 
@@ -13,6 +7,22 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 exports.list = async (req, res, next) => {
   try {
     const items = await Habit.query().where({ user_id: req.user.id });
+    res.json({ items });
+  } catch (err) { next(err); }
+};
+
+// GET /api/habits/with-logs  — habits + all logs eager loaded (shows streakLength virtual)
+exports.listWithLogs = async (req, res, next) => {
+  try {
+    const items = await Habit.withLogs(req.user.id);
+    res.json({ items });
+  } catch (err) { next(err); }
+};
+
+// GET /api/habits/today  — habits with only today's log (za prikaz na UI)
+exports.listToday = async (req, res, next) => {
+  try {
+    const items = await Habit.loggedToday(req.user.id);
     res.json({ items });
   } catch (err) { next(err); }
 };
