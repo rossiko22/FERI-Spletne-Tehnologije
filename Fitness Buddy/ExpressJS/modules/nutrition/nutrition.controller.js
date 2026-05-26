@@ -1,4 +1,4 @@
-// Nutrition controller — skeleton. OWNER: Sladjana.
+// Nutrition controller. OWNER: Sladjana.
 const { v4: uuid } = require('uuid');
 const Meal = require('../../models/Meal');
 
@@ -6,9 +6,19 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 
 exports.list = async (req, res, next) => {
   try {
-    const q = Meal.query().where({ user_id: req.user.id });
+    const q = Meal.query().where({ user_id: req.user.id }).orderBy('date', 'desc');
     if (req.query.date) q.where('date', req.query.date);
     res.json({ items: await q });
+  } catch (err) { next(err); }
+};
+
+// GET /api/nutrition/daily?date=YYYY-MM-DD
+// Vraca ukupne kalorije + vodu za dan [S-3]
+exports.daily = async (req, res, next) => {
+  try {
+    const date = req.query.date || todayISO();
+    const totals = await Meal.dailyTotals(req.user.id, date);
+    res.json({ date, calories: totals.calories ?? 0, water_ml: totals.water_ml ?? 0 });
   } catch (err) { next(err); }
 };
 
