@@ -1,12 +1,6 @@
-// Nutrition (meals + drinks) CRUD. OWNER: Sladjana.
-//
-//   GET    /api/nutrition                  list (?date=YYYY-MM-DD)
-//   POST   /api/nutrition                  { name, kind, amount, unit, calories, water, date? }
-//   DELETE /api/nutrition/:id
-
+// Nutrition CRUD. OWNER: Sladjana.
 const router = require('express').Router();
-const { body, param } = require('express-validator');
-
+const { body, param, query } = require('express-validator');
 const requireAuth = require('../../middleware/auth');
 const validate = require('../../middleware/validate');
 const c = require('./nutrition.controller');
@@ -14,6 +8,13 @@ const c = require('./nutrition.controller');
 router.use(requireAuth);
 
 router.get('/', c.list);
+router.get(
+  '/daily',
+  query('date').optional().isISO8601(),
+  validate,
+  c.daily,
+);
+
 router.post(
   '/',
   body('name').isString().trim().isLength({ min: 1, max: 120 }),
