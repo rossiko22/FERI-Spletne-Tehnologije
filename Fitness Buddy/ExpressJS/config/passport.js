@@ -16,9 +16,9 @@ passport.use(
     },
     async (payload, done) => {
       try {
-        const user = await User.where({ id: payload.sub }).fetch({ require: false });
+        const user = await User.query().findById(payload.sub);
         if (!user) return done(null, false);
-        return done(null, user.toJSON());
+        return done(null, user);
       } catch (err) {
         return done(err);
       }
