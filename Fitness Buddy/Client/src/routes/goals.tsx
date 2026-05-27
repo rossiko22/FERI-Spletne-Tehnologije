@@ -1,10 +1,10 @@
-// Goals page — OWNER: Sladjana. Goals are linked to notifications (sends a
-// nudge when a goal slips off-track) — that wiring goes via /api/notifications/send.
+// Goals page — OWNER: Sladjana.
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { useState } from 'react';
-import { Plus, Trash2, Flag, Calendar, Check, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Trash2, Flag, Calendar, Check, RotateCcw, Bell } from 'lucide-react';
 import { useStore } from '@/lib/useStore';
 import { enqueue } from '@/lib/useSync';
+import { notifications } from '@/lib/api';
 import { PageHeader, Card, Empty, Stat } from '@/components/ui-bits';
 
 export const Route = createFileRoute('/goals')({ component: GoalsPage });
@@ -19,10 +19,26 @@ type Goal = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+// Sends a push nudge for every overdue goal (progress < 100, deadline passed)
+async function nudgeOverdueGoals(items: Goal[]) {
+  if (Notification.permission !== 'granted') return;
+  const overdue = items.filter((g) => {
+    if ((g.progress ?? 0) >= 100) return false;
+    return g.deadline < today();
+  });
+  for (const g of overdue) {
+    await notifications.send({
+      title: '⚠️ Goal overdue',
+      body: `"${g.title}" is past its deadline. Update your progress!`,
+    }).catch(() => {});
+  }
+}
+
 function GoalsPage() {
   const { items, add, del, update } = useStore<Goal>('goals');
   const [title, setTitle] = useState('');
   const [start, setStart] = useState(today());
+  const [nudgeSent, setNudgeSent] = useState(false);
   const [deadline, setDeadline] = useState(() => {
     const d = new Date(); d.setMonth(d.getMonth() + 1);
     return d.toISOString().slice(0, 10);
@@ -30,6 +46,15 @@ function GoalsPage() {
 
   const completed = items.filter((g) => g.progress >= 100).length;
   const active = items.length - completed;
+  const overdue = items.filter((g) => (g.progress ?? 0) < 100 && g.deadline < today()).length;
+
+  // Nudge on page load — once per session
+  useEffect(() => {
+    if (!nudgeSent && items.length > 0) {
+      nudgeOverdueGoals(items);
+      setNudgeSent(true);
+    }
+  }, [items, nudgeSent]);
 
   const setProgress = async (g: Goal, value: number) => {
     const p = Math.max(0, Math.min(100, Math.round(value)));
@@ -46,11 +71,19 @@ function GoalsPage() {
         <Link to="/goals" className="px-3 py-1.5 rounded-md text-sm bg-primary text-primary-foreground inline-flex items-center gap-2"><Flag className="size-3.5" strokeWidth={1.5} />Goals</Link>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Stat label="Active" value={active} />
         <Stat label="Completed" value={completed} />
+        <Stat label="Overdue" value={overdue} />
         <Stat label="Total" value={items.length} />
       </div>
+
+      {overdue > 0 && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[var(--warning-bg)] px-4 py-3 text-sm">
+          <Bell className="size-4 text-[var(--warning)]" strokeWidth={1.5} />
+          <span>{overdue} goal{overdue > 1 ? 's are' : ' is'} overdue — a push reminder was sent.</span>
+        </div>
+      )}
 
       <Card className="mb-6">
         <form
@@ -85,14 +118,16 @@ function GoalsPage() {
             const elapsed = Math.max(0, totalDays - Math.max(0, daysLeft));
             const timePct = Math.min(100, Math.round((elapsed / totalDays) * 100));
             const onTrack = pct >= timePct;
+            const isOverdue = !done && g.deadline < today();
             return (
-              <li key={g.id} className={`rounded-lg border bg-card p-4 ${done ? 'border-[var(--success)]' : 'border-border'}`}>
+              <li key={g.id} className={`rounded-lg border bg-card p-4 ${done ? 'border-[var(--success)]' : isOverdue ? 'border-[var(--warning)]' : 'border-border'}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <div className="font-medium flex items-center gap-2">
-                      <Flag className={`size-4 ${done ? 'text-[var(--success)]' : 'text-primary'}`} strokeWidth={1.5} />
+                      <Flag className={`size-4 ${done ? 'text-[var(--success)]' : isOverdue ? 'text-[var(--warning)]' : 'text-primary'}`} strokeWidth={1.5} />
                       <span className={done ? 'line-through text-muted-foreground' : ''}>{g.title}</span>
                       {done && <span className="text-[10px] font-mono bg-[var(--success-bg)] text-[var(--success)] px-1.5 py-0.5 rounded">DONE</span>}
+                      {isOverdue && <span className="text-[10px] font-mono bg-[var(--warning-bg)] text-[var(--warning)] px-1.5 py-0.5 rounded">OVERDUE</span>}
                     </div>
                     <div className="text-xs text-muted-foreground font-mono mt-1 inline-flex items-center gap-1">
                       <Calendar className="size-3" strokeWidth={1.5} />
@@ -103,7 +138,7 @@ function GoalsPage() {
                 </div>
 
                 <div className="mt-3 h-2 rounded-full bg-secondary overflow-hidden relative">
-                  <div className={`h-full transition-all ${done ? 'bg-[var(--success)]' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
+                  <div className={`h-full transition-all ${done ? 'bg-[var(--success)]' : isOverdue ? 'bg-[var(--warning)]' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
                   <div className="absolute top-0 h-full w-px bg-foreground/40" style={{ left: `${timePct}%` }} />
                 </div>
                 <div className="mt-1 flex items-center justify-between text-[10px] font-mono">
