@@ -1,14 +1,18 @@
 // Auth routes — OAuth 2.0 + local password.
 // OWNER: Marko.
 //
+// The refresh token is delivered as an httpOnly `fb_refresh` cookie (never in
+// the JSON body); the short-lived access token is returned in the body and kept
+// in memory by the client.
+//
 // Endpoints:
-//   POST   /api/auth/register         { email, name, password }
-//   POST   /api/auth/login            { email, password }     -> { access, refresh, user }
-//   POST   /api/auth/refresh          { refresh }             -> { access }
-//   POST   /api/auth/logout           Bearer                  -> { ok }
-//   GET    /api/auth/me               Bearer                  -> { user }
+//   POST   /api/auth/register         { email, name, password } -> { access, user } + Set-Cookie
+//   POST   /api/auth/login            { email, password }       -> { access, user } + Set-Cookie
+//   POST   /api/auth/refresh          (fb_refresh cookie)       -> { access, user } + Set-Cookie
+//   POST   /api/auth/logout           (fb_refresh cookie)       -> { ok } + clears cookie
+//   GET    /api/auth/me               Bearer                    -> { user }
 //   GET    /api/auth/google           -> 302 to Google consent screen
-//   GET    /api/auth/google/callback  -> redirects to CLIENT_URL with tokens
+//   GET    /api/auth/google/callback  -> sets cookie, redirects to CLIENT_URL/login?oauth=1
 
 const router = require('express').Router();
 const passport = require('passport');
@@ -39,8 +43,10 @@ router.post(
   c.login,
 );
 
-router.post('/refresh', body('refresh').isString().notEmpty(), validate, c.refresh);
-router.post('/logout', requireAuth, c.logout);
+// Refresh reads the httpOnly fb_refresh cookie (no body). Logout just clears
+// that cookie, so it must work even when the access token has already expired.
+router.post('/refresh', c.refresh);
+router.post('/logout', c.logout);
 router.get('/me', requireAuth, c.me);
 
 // --- Google OAuth 2.0 flow ---

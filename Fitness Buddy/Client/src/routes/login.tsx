@@ -5,37 +5,58 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { LogIn, Activity } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';
+import { refreshSession } from '@/lib/api';
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
 });
 
+const ERRORS: Record<string, string> = {
+  invalid_credentials: 'Wrong email or password.',
+  email_taken: 'An account with that email already exists.',
+  validation_failed: 'Please check the form and try again.',
+};
+
+const DEMO = { email: 'demo@fitnessbuddy.app', password: 'Demo123!' };
+
 function LoginPage() {
   const auth = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState('demo@fitnessbuddy.app');
-  const [password, setPassword] = useState('Demo123!');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState(DEMO.email);
+  const [password, setPassword] = useState(DEMO.password);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => { if (auth.isAuthed) nav({ to: '/' }); }, [auth.isAuthed, nav]);
 
-  // If the Google OAuth callback redirected here with tokens in the query, store them.
+  const isSignup = mode === 'signup';
+
+  const toggleMode = () => {
+    setErr(null);
+    if (isSignup) {
+      setMode('signin');
+      setName('');
+      setEmail(DEMO.email);
+      setPassword(DEMO.password);
+    } else {
+      setMode('signup');
+      setName('');
+      setEmail('');
+      setPassword('');
+    }
+  };
+
+  // Google OAuth callback bounces back to /login?oauth=1 with the refresh cookie
+  // already set. Exchange it for an in-memory access token, then enter the app.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const access = params.get('access');
-    const refresh = params.get('refresh');
-    if (access && refresh) {
-      // TODO (Marko): also fetch /api/auth/me to populate user details
-      localStorage.setItem('fb_auth', JSON.stringify({
-        user: { id: 'oauth', name: 'Google user', email: '' },
-        accessToken: access,
-        refreshToken: refresh,
-        expiresAt: Date.now() + 15 * 60_000,
-      }));
-      window.dispatchEvent(new Event('fb_auth_change'));
-      nav({ to: '/' });
-    }
+    if (!params.get('oauth')) return;
+    refreshSession().then((ok) => {
+      if (ok) nav({ to: '/' });
+      else setErr('Google sign-in failed. Please try again.');
+    });
   }, [nav]);
 
   const apiBase = import.meta.env.VITE_API_URL || '/api';
@@ -47,8 +68,10 @@ function LoginPage() {
           <Activity className="size-4 text-primary" strokeWidth={1.5} />
           FitnessBuddy
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Sign in to sync your progress across devices.</p>
+        <h1 className="text-2xl font-semibold tracking-tight">{isSignup ? 'Create your account' : 'Welcome back'}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {isSignup ? 'Sign up to start tracking and syncing your progress.' : 'Sign in to sync your progress across devices.'}
+        </p>
 
         <form
           onSubmit={async (e) => {
@@ -56,28 +79,45 @@ function LoginPage() {
             setErr(null);
             setBusy(true);
             try {
-              await auth.login(email, password);
+              if (isSignup) await auth.register(email, name, password);
+              else await auth.login(email, password);
             } catch (e: any) {
-              setErr(e?.body?.error || e?.message || 'Login failed');
+              const code = e?.body?.error;
+              setErr(ERRORS[code] || e?.message || (isSignup ? 'Sign up failed' : 'Login failed'));
             } finally {
               setBusy(false);
             }
           }}
           className="mt-6 space-y-3"
         >
+          {isSignup && (
+            <label className="block">
+              <span className="text-xs text-muted-foreground">Name</span>
+              <input value={name} onChange={(e) => setName(e.target.value)} type="text" required className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary" />
+            </label>
+          )}
           <label className="block">
             <span className="text-xs text-muted-foreground">Email</span>
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary" />
           </label>
           <label className="block">
             <span className="text-xs text-muted-foreground">Password</span>
-            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary" />
+            <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required minLength={isSignup ? 8 : undefined} className="mt-1 w-full bg-input border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary" />
+            {isSignup && <span className="mt-1 block text-[10px] text-muted-foreground">At least 8 characters.</span>}
           </label>
           {err && <div className="text-xs text-destructive">{err}</div>}
           <button type="submit" disabled={busy} className="w-full inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-md py-2 text-sm font-medium hover:opacity-90 disabled:opacity-50">
-            <LogIn className="size-4" strokeWidth={1.5} /> {busy ? 'Signing in…' : 'Sign in'}
+            <LogIn className="size-4" strokeWidth={1.5} />
+            {busy ? (isSignup ? 'Creating account…' : 'Signing in…') : isSignup ? 'Create account' : 'Sign in'}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
+          <button type="button" onClick={toggleMode} className="font-medium text-primary hover:underline">
+            {isSignup ? 'Sign in' : 'Create one'}
+          </button>
+        </p>
 
         <div className="my-5 flex items-center gap-3 text-[10px] uppercase tracking-widest text-muted-foreground">
           <div className="h-px flex-1 bg-border" /> or <div className="h-px flex-1 bg-border" />

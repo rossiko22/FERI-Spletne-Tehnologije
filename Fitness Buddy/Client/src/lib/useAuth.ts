@@ -1,85 +1,50 @@
 // Auth hook — OWNER: Marko.
 //
-// Calls /api/auth/* and stores tokens in localStorage. UI components consume
-// `auth.isAuthed`, `auth.user`, `auth.login()`, `auth.logout()`, etc.
+// Thin React binding over the authStore singleton. The access token is held in
+// memory (authStore); the refresh token is an httpOnly cookie the server owns.
+// UI consumes `auth.isAuthed`, `auth.status`, `auth.user`, `auth.login()`, etc.
 
-import { useEffect, useState } from 'react';
-import { auth as authApi, ApiError } from './api';
+import { useSyncExternalStore } from 'react';
 
-export type AuthUser = { id: string; email: string; name: string; avatar_url?: string | null };
-type Stored = { user: AuthUser; accessToken: string; refreshToken: string; expiresAt: number };
+import { auth as authApi, refreshSession } from './api';
+import {
+  getState,
+  subscribe,
+  setSession,
+  clearSession,
+  type AuthUser,
+  type AuthStatus,
+} from './authStore';
 
-const KEY = 'fb_auth';
-
-function read(): Stored | null {
-  if (typeof window === 'undefined') return null;
-  try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; }
-}
-
-function write(v: Stored | null) {
-  if (typeof window === 'undefined') return;
-  if (v) localStorage.setItem(KEY, JSON.stringify(v));
-  else localStorage.removeItem(KEY);
-  window.dispatchEvent(new Event('fb_auth_change'));
-}
+export type { AuthUser, AuthStatus };
 
 export function useAuth() {
-  const [state, setState] = useState<Stored | null>(null);
-
-  useEffect(() => {
-    setState(read());
-    const sync = () => setState(read());
-    window.addEventListener('fb_auth_change', sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener('fb_auth_change', sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
+  const state = useSyncExternalStore(subscribe, getState, getState);
 
   const login = async (email: string, password: string) => {
-    try {
-      const r = await authApi.login({ email, password });
-      write({
-        user: r.user,
-        accessToken: r.access,
-        refreshToken: r.refresh,
-        expiresAt: Date.now() + 15 * 60_000,
-      });
-    } catch (err) {
-      if (err instanceof ApiError) throw err;
-      throw err;
-    }
+    const r = await authApi.login({ email, password });
+    setSession(r.user, r.access);
   };
 
   const register = async (email: string, name: string, password: string) => {
     const r = await authApi.register({ email, name, password });
-    write({
-      user: r.user,
-      accessToken: r.access,
-      refreshToken: r.refresh,
-      expiresAt: Date.now() + 15 * 60_000,
-    });
+    setSession(r.user, r.access);
   };
-
-  // TEMP for prototype browsing — Marko: remove once login is wired.
-  const loginDemo = () => login('demo@fitnessbuddy.app', 'Demo123!');
 
   const logout = async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
-    write(null);
+    try { await authApi.logout(); } catch { /* clear locally regardless */ }
+    clearSession();
   };
 
-  const refresh = async () => {
-    const cur = read();
-    if (!cur) return;
-    try {
-      const r = await authApi.refresh(cur.refreshToken);
-      write({ ...cur, accessToken: r.access, expiresAt: Date.now() + 15 * 60_000 });
-    } catch {
-      write(null);
-    }
+  return {
+    user: state.user,
+    accessToken: state.accessToken,
+    expiresAt: state.expiresAt,
+    status: state.status,
+    isAuthed: state.status === 'authed',
+    login,
+    register,
+    logout,
+    refresh: refreshSession,
   };
-
-  return { ...state, isAuthed: !!state, login, register, loginDemo, logout, refresh };
 }

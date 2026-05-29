@@ -4,6 +4,7 @@
 const passport = require('passport');
 const { Strategy: JwtStrategy, ExtractJwt } = require('passport-jwt');
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20');
+const { v4: uuid } = require('uuid');
 
 const User = require('../models/User');
 
@@ -39,10 +40,35 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
-          // TODO (Marko): find-or-create user by google profile.id / email
-          // const user = await User.findOrCreateFromGoogle(profile);
-          // return done(null, user.toJSON());
-          return done(null, { id: profile.id, email: profile.emails?.[0]?.value, name: profile.displayName });
+          const email = profile.emails?.[0]?.value || null;
+          const avatar = profile.photos?.[0]?.value || null;
+
+          // 1) Already linked? Match on the stable Google subject id.
+          let user = await User.query().findOne({ google_id: profile.id });
+
+          // 2) Otherwise link Google to an existing password account with the same email.
+          if (!user && email) {
+            user = await User.query().findOne({ email });
+            if (user) {
+              user = await user.$query().patchAndFetch({
+                google_id: profile.id,
+                avatar_url: user.avatar_url || avatar,
+              });
+            }
+          }
+
+          // 3) Brand-new user — create a password-less account.
+          if (!user) {
+            user = await User.query().insert({
+              id: uuid(),
+              email,
+              name: profile.displayName || email || 'Google user',
+              google_id: profile.id,
+              avatar_url: avatar,
+            });
+          }
+
+          return done(null, user);
         } catch (err) {
           return done(err);
         }

@@ -3,11 +3,12 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useLocation,
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
-import { Activity, Command, Keyboard, Bell } from 'lucide-react';
+import { Activity, Command, Keyboard, Bell, Loader2 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
 import { VoicePanel } from '@/components/VoicePanel';
@@ -33,6 +34,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
+
+function BootSplash() {
+  return (
+    <div className="min-h-screen grid place-items-center bg-background">
+      <Loader2 className="size-6 animate-spin text-muted-foreground" strokeWidth={1.5} />
+    </div>
+  );
+}
 
 function NotFoundComponent() {
   return (
@@ -65,7 +74,15 @@ function RootComponent() {
   const [help, setHelp] = useState(false);
   const auth = useAuth();
   const navigate = useNavigate();
+  const pathname = useLocation({ select: (l) => l.pathname });
+  const onLogin = pathname === '/login';
   useShortcuts(() => setPalette(true), () => setHelp(true));
+
+  // Reactive guard: once boot resolves to signed-out (or on logout), bounce to
+  // the login screen. We wait for `anon` specifically — `loading` shows a splash.
+  useEffect(() => {
+    if (auth.status === 'anon' && !onLogin) navigate({ to: '/login' });
+  }, [auth.status, onLogin, navigate]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') { setPalette(false); setHelp(false); } };
@@ -115,6 +132,24 @@ function RootComponent() {
     window.addEventListener('fb_queued', h);
     return () => window.removeEventListener('fb_queued', h);
   }, []);
+
+  // Login lives outside the app shell — no nav, no panels, just the form.
+  if (onLogin) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <div className="min-h-screen grid place-items-center bg-background px-4">
+          <Outlet />
+        </div>
+        <Toaster position="top-center" />
+      </QueryClientProvider>
+    );
+  }
+
+  // Boot still resolving, or signed out (the effect above is redirecting to
+  // /login). Either way don't render protected content — show the splash.
+  if (auth.status !== 'authed') {
+    return <BootSplash />;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

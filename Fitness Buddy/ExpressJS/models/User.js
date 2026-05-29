@@ -1,7 +1,12 @@
 // User model. Local password (bcrypt) + Google OAuth identity.
 // OWNER: Marko (auth) — schema below is what auth.controller relies on.
+//
+// NOTE: unlike every other model (SQLite), User is bound to the Postgres auth
+// pool (see the User.knex(authKnex) call at the bottom). Login/signup data lives
+// in Postgres; the rest of the app stays on SQLite.
 
 const { BaseModel } = require('../config/db');
+const { authKnex } = require('../config/authDb');
 
 class User extends BaseModel {
   static get tableName() { return 'users'; }
@@ -50,5 +55,9 @@ class User extends BaseModel {
     };
   }
 }
+
+// Route all User queries to Postgres; every other model stays on the SQLite
+// connection bound globally in config/db.js.
+User.knex(authKnex);
 
 module.exports = User;

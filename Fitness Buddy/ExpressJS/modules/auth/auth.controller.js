@@ -22,6 +22,30 @@ function signRefresh(userId) {
   });
 }
 
+// --- Refresh token cookie ---
+// httpOnly so JS (and thus XSS) can't read it; SameSite=Lax + path-scoped to
+// /api/auth blocks CSRF and keeps it off every other request. Secure in prod.
+const REFRESH_COOKIE = 'fb_refresh';
+
+function refreshCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/auth',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days, matches REFRESH_TTL
+  };
+}
+
+function setRefreshCookie(res, userId) {
+  res.cookie(REFRESH_COOKIE, signRefresh(userId), refreshCookieOptions());
+}
+
+function clearRefreshCookie(res) {
+  const { maxAge, ...opts } = refreshCookieOptions();
+  res.clearCookie(REFRESH_COOKIE, opts);
+}
+
 exports.register = async (req, res, next) => {
   try {
     const { email, name, password } = req.body;
@@ -35,10 +59,10 @@ exports.register = async (req, res, next) => {
       name,
       password_hash: hash,
     });
+    setRefreshCookie(res, user.id);
     res.status(201).json({
       user,                                 // password_hash stripped by $formatJson
-      access: signAccess(user.id),
-      refresh: signRefresh(user.id),
+      access: signAccess(user.id),          // refresh lives in the httpOnly cookie
     });
   } catch (err) {
     next(err);
@@ -53,10 +77,10 @@ exports.login = async (req, res, next) => {
     if (!row) return res.status(401).json({ error: 'invalid_credentials' });
     const ok = await bcrypt.compare(password, row.password_hash || '');
     if (!ok) return res.status(401).json({ error: 'invalid_credentials' });
+    setRefreshCookie(res, row.id);
     res.json({
       user: row,                            // password_hash stripped by $formatJson
-      access: signAccess(row.id),
-      refresh: signRefresh(row.id),
+      access: signAccess(row.id),           // refresh lives in the httpOnly cookie
     });
   } catch (err) {
     next(err);
@@ -65,17 +89,30 @@ exports.login = async (req, res, next) => {
 
 exports.refresh = async (req, res) => {
   try {
-    const { refresh } = req.body;
-    const payload = jwt.verify(refresh, process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret');
+    const token = req.cookies?.[REFRESH_COOKIE];
+    if (!token) return res.status(401).json({ error: 'no_refresh' });
+
+    const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret');
     if (payload.type !== 'refresh') return res.status(400).json({ error: 'wrong_token_type' });
-    res.json({ access: signAccess(payload.sub) });
+
+    const user = await User.query().findById(payload.sub);
+    if (!user) {
+      clearRefreshCookie(res);
+      return res.status(401).json({ error: 'invalid_refresh' });
+    }
+
+    // Sliding session + lets the client re-hydrate the user on a fresh page load.
+    setRefreshCookie(res, user.id);
+    res.json({ access: signAccess(user.id), user });
   } catch {
+    clearRefreshCookie(res);
     res.status(401).json({ error: 'invalid_refresh' });
   }
 };
 
 exports.logout = async (req, res) => {
   // TODO (Marko): if we add a refresh-token denylist table, invalidate here.
+  clearRefreshCookie(res);
   res.json({ ok: true });
 };
 
@@ -84,9 +121,9 @@ exports.me = async (req, res) => {
 };
 
 exports.googleCallback = async (req, res) => {
-  // req.user populated by passport-google-oauth20 strategy
-  const access = signAccess(req.user.id);
-  const refresh = signRefresh(req.user.id);
-  const url = `${process.env.CLIENT_URL || 'http://localhost:5173'}/login?access=${access}&refresh=${refresh}`;
-  res.redirect(url);
+  // req.user populated by passport-google-oauth20 strategy.
+  // Set the refresh cookie and bounce back with no tokens in the URL — the
+  // client exchanges the cookie for an access token via /api/auth/refresh.
+  setRefreshCookie(res, req.user.id);
+  res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?oauth=1`);
 };

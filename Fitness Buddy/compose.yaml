@@ -1,0 +1,26 @@
+# Postgres for FitnessBuddy auth (users / login / signup).
+# Credentials come from the root .env via ${VAR} substitution.
+#   docker compose up -d        # start
+#   docker compose down         # stop (keeps data in the named volume)
+#   docker compose down -v      # stop and wipe the database
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: fitnessbuddy-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - fitnessbuddy_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  fitnessbuddy_pgdata:
