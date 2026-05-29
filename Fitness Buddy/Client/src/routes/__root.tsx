@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Activity, Command, Keyboard, Bell } from 'lucide-react';
-import { Toaster } from 'sonner';
+import { toast, Toaster } from 'sonner';
 
 import { VoicePanel } from '@/components/VoicePanel';
 import { VisionPanel } from '@/components/VisionPanel';
@@ -83,6 +83,38 @@ function RootComponent() {
     window.addEventListener('fb_nav_cycle', cycle);
     return () => window.removeEventListener('fb_nav_cycle', cycle);
   }, [navigate]);
+
+  useEffect(() => {
+    const h = () => toast.error('Sync failed — changes saved locally');
+    window.addEventListener('fb_sync_error', h);
+    return () => window.removeEventListener('fb_sync_error', h);
+  }, []);
+
+  useEffect(() => {
+    const h = (e: Event) => {
+      const { entity, kind } = (e as CustomEvent).detail;
+      if (kind === 'delete') return; // delete ne sporočamo
+      
+      const names: Record<string, string> = {
+        workout: 'Workout',
+        meal: 'Meal',
+        habit: 'Habit',
+        goal: 'Goal',
+        habitLog: 'Habit check-in',
+      };
+
+      // Samo če je offline
+      fetch('/api/health', { cache: 'no-store' })
+        .then(() => {}) // online — ne prikaži
+        .catch(() => {
+          toast(`${names[entity] ?? 'Item'} saved locally — will sync when online`, {
+            icon: '📶',
+          });
+        });
+    };
+    window.addEventListener('fb_queued', h);
+    return () => window.removeEventListener('fb_queued', h);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

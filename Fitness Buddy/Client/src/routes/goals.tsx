@@ -92,7 +92,17 @@ function GoalsPage() {
             if (!title.trim()) return;
             if (deadline < start) { alert('Deadline must be on or after start date.'); return; }
             const g = await add({ title: title.trim(), progress: 0, startDate: start, deadline });
-            await enqueue({ kind: 'create', entity: 'goal', payload: g });
+            await enqueue({
+              kind: 'create',
+              entity: 'goal',
+              payload: {
+                id: g.id,
+                title: g.title,
+                progress: g.progress,
+                start_date: g.startDate,
+                deadline: g.deadline,
+              },
+            });
             setTitle('');
           }}
           className="grid md:grid-cols-4 gap-3"
@@ -134,7 +144,15 @@ function GoalsPage() {
                       {g.startDate ?? '—'} → {g.deadline} · {daysLeft > 0 ? `${daysLeft}d left` : done ? 'complete' : 'overdue'}
                     </div>
                   </div>
-                  <button onClick={() => del(g.id)} className="text-muted-foreground hover:text-destructive p-1"><Trash2 className="size-4" strokeWidth={1.5} /></button>
+                  <button
+                    onClick={async () => {
+                      await del(g.id);
+                      await enqueue({ kind: 'delete', entity: 'goal', payload: { id: g.id } });
+                    }}
+                    className="text-muted-foreground hover:text-destructive p-1"
+                  >
+                    <Trash2 className="size-4" strokeWidth={1.5} />
+                  </button>
                 </div>
 
                 <div className="mt-3 h-2 rounded-full bg-secondary overflow-hidden relative">

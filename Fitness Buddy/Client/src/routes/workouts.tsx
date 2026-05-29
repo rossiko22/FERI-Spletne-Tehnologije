@@ -1,8 +1,9 @@
-// Workouts page — OWNER: Sladjana (UI).
 import { createFileRoute } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 import { Trash2, Plus, Calendar, X } from 'lucide-react';
 import { useStore } from '@/lib/useStore';
+import { useSync, withSync } from '@/lib/useSync';
+import { workouts as workoutsApi } from '@/lib/api';
 import { PageHeader, Card, Empty, Stat } from '@/components/ui-bits';
 
 export const Route = createFileRoute('/workouts')({ component: WorkoutsPage });
@@ -12,6 +13,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 function WorkoutsPage() {
   const { items, add, del } = useStore<Workout>('workouts');
+  const { state, pending } = useSync();
   const [name, setName] = useState('');
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
@@ -25,6 +27,9 @@ function WorkoutsPage() {
 
   const totalMin = visible.reduce((s, x) => s + x.duration, 0);
   const sessions = visible.length;
+
+  const isQueued = (id: string) =>
+    pending.some((q) => q.payload && (q.payload as { id: string }).id === id);
 
   return (
     <div>
@@ -41,7 +46,11 @@ function WorkoutsPage() {
           onSubmit={async (e) => {
             e.preventDefault();
             if (!name.trim()) return;
-            await add({ name: name.trim(), sets, reps, duration, date: today() });
+            const item = await add({ name: name.trim(), sets, reps, duration, date: today() });
+            await withSync(
+              () => workoutsApi.create(item),
+              { kind: 'create', entity: 'workout', payload: item }
+            );
             setName('');
           }}
           className="grid md:grid-cols-5 gap-3"
@@ -65,10 +74,32 @@ function WorkoutsPage() {
           {visible.slice().reverse().map((w) => (
             <li key={w.id} className="flex items-center justify-between p-4">
               <div>
-                <div className="font-medium">{w.name}</div>
+                <div className="font-medium flex items-center gap-2">
+                  {w.name}
+                  {isQueued(w.id) && (
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                      state === 'syncing'
+                        ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                        : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                    }`}>
+                      {state === 'syncing' ? 'syncing…' : 'queued'}
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-muted-foreground font-mono mt-1">{w.sets}×{w.reps} · {w.duration}min · {w.date}</div>
               </div>
-              <button onClick={() => del(w.id)} className="text-muted-foreground hover:text-destructive transition-colors p-2"><Trash2 className="size-4" strokeWidth={1.5} /></button>
+              <button
+                onClick={async () => {
+                  await del(w.id);
+                  await withSync(
+                    () => workoutsApi.remove(w.id),
+                    { kind: 'delete', entity: 'workout', payload: { id: w.id } }
+                  );
+                }}
+                className="text-muted-foreground hover:text-destructive transition-colors p-2"
+              >
+                <Trash2 className="size-4" strokeWidth={1.5} />
+              </button>
             </li>
           ))}
         </ul>

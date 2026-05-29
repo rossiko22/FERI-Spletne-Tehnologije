@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Trash2, Plus, Check, Calendar, X, Flag } from 'lucide-react';
 import { useStore } from '@/lib/useStore';
 import { PageHeader, Empty } from '@/components/ui-bits';
+import { enqueue } from '@/lib/useSync';
 
 export const Route = createFileRoute('/habits')({ component: HabitsPage });
 
@@ -37,8 +38,13 @@ function HabitsPage() {
   const toggleToday = async (habitId: string) => {
     const t = today();
     const existing = logs.items.find((l) => l.habitId === habitId && l.date === t);
-    if (existing) await logs.del(existing.id);
-    else await logs.add({ habitId, date: t });
+    if (existing) {
+      await logs.del(existing.id);
+      await enqueue({ kind: 'delete', entity: 'habitLog', payload: { id: existing.id } });
+    } else {
+      const item = await logs.add({ habitId, date: t });
+      await enqueue({ kind: 'create', entity: 'habitLog', payload: item });
+    }
   };
 
   return (
@@ -55,7 +61,8 @@ function HabitsPage() {
           onSubmit={async (e) => {
             e.preventDefault();
             if (!name.trim()) return;
-            await habits.add({ name: name.trim() });
+            const item = await habits.add({ name: name.trim() });
+            await enqueue({ kind: 'create', entity: 'habit', payload: item });
             setName('');
           }}
           className="flex gap-3"
@@ -97,7 +104,15 @@ function HabitsPage() {
                   <button onClick={() => !isReadOnly && toggleToday(h.id)} disabled={isReadOnly} className={`size-9 rounded-md grid place-items-center border transition-all ${done ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary hover:text-foreground'} ${isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}>
                     <Check className="size-4" strokeWidth={2} />
                   </button>
-                  <button onClick={() => habits.del(h.id)} className="text-muted-foreground hover:text-destructive p-2"><Trash2 className="size-4" strokeWidth={1.5} /></button>
+                  <button
+                    onClick={async () => {
+                      await habits.del(h.id);
+                      await enqueue({ kind: 'delete', entity: 'habit', payload: { id: h.id } });
+                    }}
+                    className="text-muted-foreground hover:text-destructive p-2"
+                  >
+                    <Trash2 className="size-4" strokeWidth={1.5} />
+                  </button>
                 </div>
               </li>
             );

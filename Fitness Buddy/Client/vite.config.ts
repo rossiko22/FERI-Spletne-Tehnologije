@@ -1,15 +1,10 @@
-import { defineConfig } from 'vite';
-import path from 'node:path';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
-import { VitePWA } from 'vite-plugin-pwa';
+import { defineConfig } from 'vite'
+import path from 'node:path'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
-// SPA mode — no SSR, no TanStack Start, no Cloudflare. Produces a fully
-// self-contained `dist/` (bundled JS + CSS + service worker + manifest).
-//
-// Service worker is the school's PWA requirement. We use the "injectManifest"
-// strategy so Ana can write the SW logic directly in src/sw.ts.
 export default defineConfig({
   plugins: [
     react(),
@@ -19,17 +14,20 @@ export default defineConfig({
       generatedRouteTree: 'src/routeTree.gen.ts',
     }),
     VitePWA({
+      // InjectManifest = mi pišemo SW sami, plugin samo vstavi seznam datotek
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      injectRegister: false, // we register manually from main.tsx
-      manifest: false,        // we ship our own public/manifest.webmanifest
-      devOptions: {
-        enabled: true,
-        type: 'module',
+      injectManifest: {
+        swDest: 'dist/sw.js',
       },
-    }),
+      manifest: false,
+      devOptions: {
+        enabled: true,   // SW aktiven tudi v dev načinu
+        type: 'module',
+      }
+    })
   ],
   resolve: {
     alias: {
@@ -37,14 +35,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
     proxy: {
-      // Optional dev convenience: forward /api/* to Express so the client can
-      // use relative URLs in dev. In prod, use VITE_API_URL.
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
-      },
-    },
-  },
-});
+      }
+    }
+  }
+})

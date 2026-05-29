@@ -1,70 +1,87 @@
 /// <reference lib="webworker" />
-//
-// Service worker — OWNER: Ana.
-//
-// `vite-plugin-pwa` with `strategies: 'injectManifest'` will inject the
-// precache list as `self.__WB_MANIFEST` so Workbox can use it.
-//
-// Responsibilities (PWA criterion):
-//   1. Precache the built app shell so the app loads offline.
-//   2. Runtime cache for /api/* GETs (stale-while-revalidate).
-//   3. Receive push events and show OS notifications (Web Push criterion).
-//   4. Handle notification clicks → open the relevant route.
 
-import { precacheAndRoute } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate, NetworkFirst } from 'workbox-strategies';
+import { clientsClaim } from 'workbox-core'
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
+import { registerRoute, NavigationRoute } from 'workbox-routing'
+import {
+  StaleWhileRevalidate,
+  CacheFirst,
+} from 'workbox-strategies'
+import { ExpirationPlugin } from 'workbox-expiration'
 
-declare const self: ServiceWorkerGlobalScope;
+declare const self: ServiceWorkerGlobalScope & typeof globalThis
 
-precacheAndRoute(self.__WB_MANIFEST);
+clientsClaim()
+self.skipWaiting()
 
-// Cache GET /api/* with stale-while-revalidate so the app still shows last-known
-// data when offline. Mutations (POST/PUT/DELETE) intentionally bypass the cache
-// — they queue client-side via useSync.ts.
+// Vite-PWA vstavi seznam datotek sem
+precacheAndRoute(self.__WB_MANIFEST)
+cleanupOutdatedCaches()
+
+// 1. SPA navigacije — vedno vrni app shell iz precache, tudi ko je DevTools Offline.
 registerRoute(
-  ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET',
-  new StaleWhileRevalidate({ cacheName: 'api-get' }),
-);
+  new NavigationRoute(
+    createHandlerBoundToURL('/index.html')
+  )
+)
 
-// HTML navigations: prefer network, fall back to the cached shell.
+// 2. API GET klici — zadnji znani odgovor je na voljo offline.
 registerRoute(
-  ({ request }) => request.mode === 'navigate',
-  new NetworkFirst({ cacheName: 'pages' }),
-);
+  ({ url, request }) =>
+    url.pathname.startsWith('/api/') &&
+    url.pathname !== '/api/health' &&
+    request.method === 'GET',
+  new StaleWhileRevalidate({
+    cacheName: 'api-cache',
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 })
+    ]
+  })
+)
 
-// --- Web Push (Ana) ---
-self.addEventListener('push', (event) => {
-  let payload: { title: string; body?: string; url?: string } = { title: 'FitnessBuddy' };
+// 3. Ikone in statični asseti — CacheFirst (redko se spremenijo)
+registerRoute(
+  ({ request }) =>
+    request.destination === 'image' ||
+    request.destination === 'font' ||
+    request.url.includes('/icon-'),
+  new CacheFirst({
+    cacheName: 'assets-cache',
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 30 * 24 * 60 * 60 })
+    ]
+  })
+)
+
+// Push obvestila
+self.addEventListener('push', (event: PushEvent) => {
+  let data: { title: string; body?: string; url?: string } = { title: 'FitnessBuddy', body: 'Cas za trening!' }
   try {
-    if (event.data) payload = event.data.json();
+    if (event.data) data = event.data.json()
   } catch {
-    payload.body = event.data?.text();
+    data.body = event.data?.text()
   }
+
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
+    self.registration.showNotification(data.title, {
+      body: data.body,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      data: { url: payload.url || '/' },
-    }),
-  );
-});
+      data: { url: data.url ?? '/' }
+    })
+  )
+})
 
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+// Klik na obvestilo → odpre app
+self.addEventListener('notificationclick', (event: NotificationEvent) => {
+  event.notification.close()
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((wins) => {
-      for (const w of wins) {
-        if ('focus' in w) {
-          w.navigate(url);
-          return w.focus();
-        }
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      const url = event.notification.data?.url ?? '/'
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) return client.focus()
       }
-      return self.clients.openWindow(url);
-    }),
-  );
-});
-
-self.skipWaiting();
+      return self.clients.openWindow(url)
+    })
+  )
+})

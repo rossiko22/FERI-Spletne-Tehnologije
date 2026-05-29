@@ -1,6 +1,6 @@
 // Profile page — OWNER: shared (Marko for auth section, Ana for push+sync toggles).
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Bell, Download, LogOut, RefreshCw, Wifi } from 'lucide-react';
+import { Bell, BellOff, Download, LogOut, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';
 import { useSync } from '@/lib/useSync';
 import { useNotifications } from '@/lib/useNotifications';
@@ -11,8 +11,8 @@ export const Route = createFileRoute('/profile')({ component: ProfilePage });
 
 function ProfilePage() {
   const auth = useAuth();
-  const sync = useSync();
-  const notif = useNotifications();
+  const { state, pending, forceSync } = useSync();
+  const { supported, subscribed, loading, subscribe, unsubscribe, sendTest } = useNotifications();
   const navigate = useNavigate();
 
   if (!auth.isAuthed) {
@@ -56,19 +56,64 @@ function ProfilePage() {
         </div>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-6">
-        <Card>
-          <div className="flex items-center gap-2"><Bell className="size-4 text-primary" strokeWidth={1.5} /><span className="font-medium">Push notifications</span></div>
-          <div className="text-sm text-muted-foreground mt-2">Permission: {notif.permission} · {notif.subscribed ? 'subscribed' : 'not subscribed'}</div>
-          <button onClick={notif.subscribed ? notif.sendTest : notif.enable} className="mt-4 w-full inline-flex items-center justify-center rounded-md border border-border py-1.5 text-xs hover:border-primary">
-            {notif.subscribed ? 'Send test push' : notif.permission === 'granted' ? 'Subscribe' : 'Enable notifications'}
+      <div className="rounded-lg border border-border bg-card p-4 space-y-4 mb-6">
+        <h3 className="font-semibold text-sm">Sync & Notifications</h3>
+
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-medium">Data sync</div>
+            <div className="text-xs text-muted-foreground">
+              {pending.length > 0 ? `${pending.length} events waiting` : 'All synced'}
+            </div>
+          </div>
+          <button
+            onClick={forceSync}
+            disabled={state === 'syncing'}
+            className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-sm font-medium hover:opacity-90 disabled:opacity-50"
+          >
+            <RefreshCw className={`size-4 ${state === 'syncing' ? 'animate-spin' : ''}`} strokeWidth={1.5} />
+            Force sync
           </button>
-        </Card>
-        <Card>
-          <div className="flex items-center gap-2"><Wifi className="size-4 text-primary" strokeWidth={1.5} /><span className="font-medium">Background sync</span></div>
-          <div className="text-sm text-muted-foreground mt-2">{sync.pending.length} queued · {sync.state}</div>
-          <button onClick={sync.forceSync} className="mt-4 w-full inline-flex items-center justify-center rounded-md border border-border py-1.5 text-xs hover:border-primary">Force sync now</button>
-        </Card>
+        </div>
+
+        {supported && (
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-medium">Push notifications</div>
+              <div className="text-xs text-muted-foreground">
+                {subscribed ? 'Active — tap to test' : 'Disabled'}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {subscribed ? (
+                <>
+                  <button
+                    onClick={sendTest}
+                    className="inline-flex items-center gap-2 border border-border rounded-md px-3 py-1.5 text-sm hover:border-primary"
+                  >
+                    <Bell className="size-4" strokeWidth={1.5} /> Test
+                  </button>
+                  <button
+                    onClick={unsubscribe}
+                    disabled={loading}
+                    className="inline-flex items-center gap-2 border border-destructive text-destructive rounded-md px-3 py-1.5 text-sm hover:opacity-80 disabled:opacity-50"
+                  >
+                    <BellOff className="size-4" strokeWidth={1.5} /> Unsubscribe
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={subscribe}
+                  disabled={loading}
+                  className="inline-flex items-center gap-2 bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-sm font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  <Bell className="size-4" strokeWidth={1.5} />
+                  {loading ? 'Enabling…' : 'Enable notifications'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <Card className="mb-6">

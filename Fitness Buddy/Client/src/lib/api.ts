@@ -96,6 +96,7 @@ export const sync = {
 export const notifications = {
   publicKey: () => api.get<{ publicKey: string | null }>('/notifications/public-key'),
   subscribe: (sub: PushSubscriptionJSON) => api.post<{ ok: true }>('/notifications/subscribe', sub),
+  unsubscribe: () => api.post<{ ok: true }>('/notifications/unsubscribe'),
   test: () => api.post<{ ok: true }>('/notifications/test'),
   send: (data: { title: string; body: string }) =>
   api.post<{ ok: true }>('/notifications/send', data),

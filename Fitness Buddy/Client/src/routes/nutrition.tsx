@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Trash2, Plus, Droplet, Calendar, X, Utensils } from 'lucide-react';
 import { useStore } from '@/lib/useStore';
 import { PageHeader, Card, Empty, Stat } from '@/components/ui-bits';
+import { enqueue } from '@/lib/useSync';
 
 export const Route = createFileRoute('/nutrition')({ component: NutritionPage });
 
@@ -70,7 +71,21 @@ function NutritionPage() {
             e.preventDefault();
             if (!name.trim()) return;
             const c = toCanonical(kind, amount, unit);
-            await add({ name: name.trim(), kind, amount, unit, ...c, date: today() });
+            const item = await add({ name: name.trim(), kind, amount, unit, ...c, date: today() });
+            await enqueue({
+              kind: 'create',
+              entity: 'meal',
+              payload: {
+                id: item.id,
+                name: item.name,
+                kind: item.kind,
+                amount: item.amount,
+                unit: item.unit,
+                calories: item.calories,
+                water_ml: item.water,
+                date: item.date,
+              },
+            });
             setName('');
           }}
           className="grid md:grid-cols-6 gap-3"
@@ -109,7 +124,15 @@ function NutritionPage() {
                     </div>
                   </div>
                 </div>
-                <button onClick={() => del(m.id)} className="text-muted-foreground hover:text-destructive p-2"><Trash2 className="size-4" strokeWidth={1.5} /></button>
+                <button
+                  onClick={async () => {
+                    await del(m.id);
+                    await enqueue({ kind: 'delete', entity: 'meal', payload: { id: m.id } });
+                  }}
+                  className="text-muted-foreground hover:text-destructive p-2"
+                >
+                  <Trash2 className="size-4" strokeWidth={1.5} />
+                </button>
               </li>
             );
           })}

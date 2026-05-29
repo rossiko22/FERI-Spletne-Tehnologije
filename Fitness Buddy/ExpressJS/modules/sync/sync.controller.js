@@ -1,42 +1,111 @@
-// Sync controller — skeleton. OWNER: Ana.
-//
-// Strategy:
-//   - Persist each incoming event in `sync_events` for audit (idempotent on event.id).
-//   - For each event, dispatch to the corresponding model based on `entity`
-//     and `kind`. If the entity row already exists (id collision from offline
-//     uuid), upsert.
-//   - Return per-event { status: 'applied'|'skipped'|'error' } so the client
-//     knows which to drop from its queue.
-
 const { v4: uuid } = require('uuid');
-const SyncEvent = require('../../models/SyncEvent');
+const SyncEvent       = require('../../models/SyncEvent');
+const Workout         = require('../../models/Workout');
+const Meal            = require('../../models/Meal');
+const { Habit, HabitLog } = require('../../models/Habit');
+
+// Goal nima modela — poiščemo direktno v DB
+const { BaseModel }   = require('../../config/db');
+
+async function dispatch(ev) {
+  const { entity, kind, payload } = ev;
+
+  switch (entity) {
+    case 'workout': {
+      if (kind === 'create') {
+        const exists = await Workout.query().findById(payload.id);
+        if (!exists) await Workout.query().insert(payload);
+      } else if (kind === 'update') {
+        await Workout.query().patchAndFetchById(payload.id, payload);
+      } else if (kind === 'delete') {
+        await Workout.query().deleteById(payload.id);
+      }
+      break;
+    }
+    case 'meal': {
+      if (kind === 'create') {
+        const exists = await Meal.query().findById(payload.id);
+        if (!exists) await Meal.query().insert(payload);
+      } else if (kind === 'update') {
+        await Meal.query().patchAndFetchById(payload.id, payload);
+      } else if (kind === 'delete') {
+        await Meal.query().deleteById(payload.id);
+      }
+      break;
+    }
+    case 'habit': {
+      if (kind === 'create') {
+        const exists = await Habit.query().findById(payload.id);
+        if (!exists) await Habit.query().insert(payload);
+      } else if (kind === 'update') {
+        await Habit.query().patchAndFetchById(payload.id, payload);
+      } else if (kind === 'delete') {
+        await Habit.query().deleteById(payload.id);
+      }
+      break;
+    }
+    case 'habitLog': {
+      // Pretvori habitId → habit_id za DB
+      const dbPayload = { ...payload };
+      if (dbPayload.habitId) {
+        dbPayload.habit_id = dbPayload.habitId;
+        delete dbPayload.habitId;
+      }
+      if (kind === 'create') {
+        const exists = await HabitLog.query().findById(dbPayload.id);
+        if (!exists) await HabitLog.query().insert(dbPayload);
+      } else if (kind === 'update') {
+        await HabitLog.query().patchAndFetchById(dbPayload.id, dbPayload);
+      } else if (kind === 'delete') {
+        await HabitLog.query().deleteById(dbPayload.id);
+      }
+      break;
+    }
+    case 'goal': {
+      // Goal nima modela — direkten SQL preko knex
+      const knex = BaseModel.knex();
+      if (kind === 'create') {
+        const exists = await knex('goals').where({ id: payload.id }).first();
+        if (!exists) await knex('goals').insert(payload);
+      } else if (kind === 'update') {
+        await knex('goals').where({ id: payload.id }).update(payload);
+      } else if (kind === 'delete') {
+        await knex('goals').where({ id: payload.id }).delete();
+      }
+      break;
+    }
+    default:
+      throw new Error(`unknown entity: ${entity}`);
+  }
+}
 
 exports.drain = async (req, res, next) => {
   try {
-    const events = Array.isArray(req.body?.events) ? req.body.events : [];
+    const events  = Array.isArray(req.body?.events) ? req.body.events : [];
     const results = [];
 
     for (const ev of events) {
+      const evId = ev.id || uuid();
+      const already = await SyncEvent.query().findById(evId);
+      if (already) {
+        results.push({ id: evId, status: 'skipped' });
+        continue;
+      }
+
       try {
-        // 1. log the event so the server has a full history
         await SyncEvent.query().insert({
-          id: ev.id || uuid(),
+          id:      evId,
           user_id: req.user.id,
-          kind: ev.kind,
-          entity: ev.entity,
-          payload: ev.payload ?? null,        // jsonAttributes auto-stringifies
+          kind:    ev.kind,
+          entity:  ev.entity,
+          payload: ev.payload ?? null,
         });
 
-        // 2. TODO (Ana): dispatch to the right model based on ev.entity / ev.kind.
-        //    Pattern:
-        //      const Workout = require('../../models/Workout');
-        //      if (ev.kind === 'create') await Workout.query().insert(ev.payload);
-        //      if (ev.kind === 'update') await Workout.query().patchAndFetchById(ev.payload.id, ev.payload);
-        //      if (ev.kind === 'delete') await Workout.query().deleteById(ev.payload.id);
-
-        results.push({ id: ev.id, status: 'applied' });
+        await dispatch(ev);
+        results.push({ id: evId, status: 'applied' });
       } catch (err) {
-        results.push({ id: ev.id, status: 'error', error: err.message });
+        console.error(`[sync] event ${evId} failed:`, err.message);
+        results.push({ id: evId, status: 'error', error: err.message });
       }
     }
 
@@ -50,7 +119,8 @@ exports.listEvents = async (req, res, next) => {
   try {
     const items = await SyncEvent.query()
       .where({ user_id: req.user.id })
-      .orderBy('created_at', 'DESC');
+      .orderBy('created_at', 'DESC')
+      .limit(200);
     res.json({ items });
   } catch (err) {
     next(err);
