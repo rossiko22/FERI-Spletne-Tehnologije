@@ -5,6 +5,7 @@ import { Plus, Trash2, Flag, Calendar, Check, RotateCcw, Bell } from 'lucide-rea
 import { useStore } from '@/lib/useStore';
 import { enqueue } from '@/lib/useSync';
 import { notifications } from '@/lib/api';
+import { addNotification } from '@/lib/useNotificationsCenter';
 import { PageHeader, Card, Empty, Stat } from '@/components/ui-bits';
 
 export const Route = createFileRoute('/goals')({ component: GoalsPage });
@@ -19,18 +20,31 @@ type Goal = {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Sends a push nudge for every overdue goal (progress < 100, deadline passed)
 async function nudgeOverdueGoals(items: Goal[]) {
   if (Notification.permission !== 'granted') return;
   const overdue = items.filter((g) => {
     if ((g.progress ?? 0) >= 100) return false;
     return g.deadline < today();
   });
+
   for (const g of overdue) {
-    await notifications.send({
-      title: '⚠️ Goal overdue',
-      body: `"${g.title}" is past its deadline. Update your progress!`,
-    }).catch(() => {});
+    const title = '⚠️ Goal overdue';
+    const body = `"${g.title}" is past its deadline. Update your progress!`;
+    
+    // Shrani v notification center
+    addNotification(title, body, '/goals');
+    
+    try {
+      await notifications.send({ title, body });
+    } catch {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        data: { url: '/goals' },
+      });
+    }
   }
 }
 
@@ -81,7 +95,7 @@ function GoalsPage() {
       {overdue > 0 && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-[var(--warning)] bg-[var(--warning-bg)] px-4 py-3 text-sm">
           <Bell className="size-4 text-[var(--warning)]" strokeWidth={1.5} />
-          <span>{overdue} goal{overdue > 1 ? 's are' : ' is'} overdue — a push reminder was sent.</span>
+          <span>{overdue} goal{overdue > 1 ? 's are' : ' is'} overdue </span>
         </div>
       )}
 

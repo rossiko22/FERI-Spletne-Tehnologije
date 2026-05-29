@@ -62,13 +62,28 @@ self.addEventListener('push', (event: PushEvent) => {
     data.body = event.data?.text()
   }
 
+  // Shrani v localStorage za notification center
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      data: { url: data.url ?? '/' }
-    })
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'PUSH_RECEIVED',
+          notification: {
+            title: data.title,
+            body: data.body,
+            url: data.url ?? '/',
+            timestamp: Date.now(),
+          }
+        });
+      });
+    }).then(() =>
+      self.registration.showNotification(data.title, {
+        body: data.body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        data: { url: data.url ?? '/' }
+      })
+    )
   )
 })
 

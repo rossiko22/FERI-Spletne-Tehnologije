@@ -7,7 +7,7 @@ import {
   useNavigate,
   useRouter,
 } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Activity, Command, Keyboard, Bell, Loader2 } from 'lucide-react';
 import { toast, Toaster } from 'sonner';
 
@@ -18,6 +18,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { ShortcutsOverlay } from '@/components/ShortcutsOverlay';
 import { useShortcuts } from '@/lib/useShortcuts';
 import { useAuth } from '@/lib/useAuth';
+import { useNotificationCenter } from '@/lib/useNotificationsCenter';
 
 const NAV = [
   { to: '/',           label: 'Today' },
@@ -72,20 +73,21 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const auth = useAuth();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (l) => l.pathname });
   const onLogin = pathname === '/login';
+  const bellRef = useRef<HTMLDivElement>(null);
+  const { notifications, unreadCount, markAllRead, clear } = useNotificationCenter();
   useShortcuts(() => setPalette(true), () => setHelp(true));
 
-  // Reactive guard: once boot resolves to signed-out (or on logout), bounce to
-  // the login screen. We wait for `anon` specifically — `loading` shows a splash.
   useEffect(() => {
     if (auth.status === 'anon' && !onLogin) navigate({ to: '/login' });
   }, [auth.status, onLogin, navigate]);
 
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') { setPalette(false); setHelp(false); } };
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') { setPalette(false); setHelp(false); setNotifOpen(false); } };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
   }, []);
@@ -110,8 +112,7 @@ function RootComponent() {
   useEffect(() => {
     const h = (e: Event) => {
       const { entity, kind } = (e as CustomEvent).detail;
-      if (kind === 'delete') return; // delete ne sporočamo
-      
+      if (kind === 'delete') return;
       const names: Record<string, string> = {
         workout: 'Workout',
         meal: 'Meal',
@@ -119,21 +120,27 @@ function RootComponent() {
         goal: 'Goal',
         habitLog: 'Habit check-in',
       };
-
-      // Samo če je offline
       fetch('/api/health', { cache: 'no-store' })
-        .then(() => {}) // online — ne prikaži
+        .then(() => {})
         .catch(() => {
-          toast(`${names[entity] ?? 'Item'} saved locally — will sync when online`, {
-            icon: '📶',
-          });
+          toast(`${names[entity] ?? 'Item'} saved locally — will sync when online`, { icon: '📶' });
         });
     };
     window.addEventListener('fb_queued', h);
     return () => window.removeEventListener('fb_queued', h);
   }, []);
 
-  // Login lives outside the app shell — no nav, no panels, just the form.
+  // Zapri notif dropdown ko klikneš zunaj
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
   if (onLogin) {
     return (
       <QueryClientProvider client={queryClient}>
@@ -145,8 +152,6 @@ function RootComponent() {
     );
   }
 
-  // Boot still resolving, or signed out (the effect above is redirecting to
-  // /login). Either way don't render protected content — show the splash.
   if (auth.status !== 'authed') {
     return <BootSplash />;
   }
@@ -180,10 +185,53 @@ function RootComponent() {
               <button onClick={() => setHelp(true)} title="Shortcuts (?)" className="text-muted-foreground hover:text-foreground p-1.5">
                 <Keyboard className="size-4" strokeWidth={1.5} />
               </button>
-              <button title="Notifications" className="relative text-muted-foreground hover:text-foreground p-1.5">
-                <Bell className="size-4" strokeWidth={1.5} />
-                <span className="absolute top-1 right-1 size-1.5 rounded-full bg-[var(--warning)]" />
-              </button>
+
+              {/* Notification center */}
+              <div className="relative" ref={bellRef}>
+                <button
+                  onClick={() => { setNotifOpen(!notifOpen); markAllRead(); }}
+                  title="Notifications"
+                  className="relative text-muted-foreground hover:text-foreground p-1.5"
+                >
+                  <Bell className="size-4" strokeWidth={1.5} />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 size-1.5 rounded-full bg-[var(--warning)]" />
+                  )}
+                </button>
+
+                {notifOpen && (
+                  <div className="absolute right-0 top-8 w-80 rounded-lg border border-border bg-card shadow-lg z-50">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                      <span className="text-sm font-medium">Notifications</span>
+                      <button onClick={clear} className="text-xs text-muted-foreground hover:text-foreground">
+                        Clear all
+                      </button>
+                    </div>
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                        No notifications yet
+                      </div>
+                    ) : (
+                      <ul className="max-h-80 overflow-y-auto divide-y divide-border">
+                        {notifications.map((n) => (
+                          <li
+                            key={n.id}
+                            onClick={() => { setNotifOpen(false); navigate({ to: n.url as any }); }}
+                            className={`px-4 py-3 cursor-pointer hover:bg-secondary ${!n.read ? 'bg-primary/5' : ''}`}
+                          >
+                            <div className="text-sm font-medium">{n.title}</div>
+                            {n.body && <div className="text-xs text-muted-foreground mt-0.5">{n.body}</div>}
+                            <div className="text-[10px] text-muted-foreground font-mono mt-1">
+                              {new Date(n.timestamp).toLocaleTimeString()}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <SyncPill />
               {auth.isAuthed ? (
                 <button

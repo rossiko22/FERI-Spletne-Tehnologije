@@ -33,17 +33,14 @@ export function useNotifications() {
     try {
       const { publicKey } = await notifApi.publicKey();
       if (!publicKey) throw new Error('VAPID public key ni nastavljen na strežniku');
-
       const perm = await Notification.requestPermission();
       setPermission(perm);
       if (perm !== 'granted') throw new Error('Dovoljenje zavrnjeno');
-
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly:      true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
-
       await notifApi.subscribe(sub.toJSON());
       setSubscribed(true);
     } catch (e: unknown) {
