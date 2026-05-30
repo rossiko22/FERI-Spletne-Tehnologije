@@ -17,6 +17,7 @@ router.get(
 
 router.post(
   '/',
+  body('id').optional().isUUID(),
   body('name').isString().trim().isLength({ min: 1, max: 120 }),
   body('kind').isIn(['food', 'drink']),
   body('amount').optional().isFloat({ min: 0 }),

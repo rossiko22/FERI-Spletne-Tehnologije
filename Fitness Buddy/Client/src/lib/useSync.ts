@@ -45,22 +45,26 @@ export async function withSync<T>(
   apiCall: () => Promise<T>,
   queueItem: Omit<QueueItem, 'id' | 'createdAt'>
 ): Promise<void> {
+  // Najprej preveri ali smo online
+  const isOnline = await checkOnline();
+  
+  if (!isOnline) {
+    // Offline — takoj dodaj v queue
+    await enqueue(queueItem);
+    return;
+  }
+
+  // Online — poskusi API klic
   try {
     await apiCall();
-    // Online — API uspel, ne dodaj v queue
+    // Uspelo — ne dodaj v queue
   } catch (err: unknown) {
-    // Če je auth napaka (401) ali server napaka (5xx) — ne dodaj v queue
-    // Samo če je network napaka (offline) — dodaj v queue
-    const isNetworkError = err instanceof TypeError && err.message.includes('fetch');
-    const isAuthError = err instanceof Error && err.message.includes('401');
-    
-    if (isNetworkError && !isAuthError) {
+    // API klic ni uspel — preveri ali je offline
+    const stillOnline = await checkOnline();
+    if (!stillOnline) {
       await enqueue(queueItem);
-    } else if (!isAuthError) {
-      // Poskusi checkOnline — če offline, enqueue
-      const online = await checkOnline();
-      if (!online) await enqueue(queueItem);
     }
+    // Če je online in API vrne napako (401, 500) — ne dodaj v queue
   }
 }
 

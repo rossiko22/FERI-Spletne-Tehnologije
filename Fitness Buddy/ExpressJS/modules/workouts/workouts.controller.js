@@ -25,8 +25,12 @@ exports.stats = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
+    const id = req.body.id || uuid();
+    const existing = await Workout.query().findOne({ id, user_id: req.user.id });
+    if (existing) return res.status(200).json(existing);
+
     const row = await Workout.query().insert({
-      id: uuid(),
+      id,
       user_id: req.user.id,
       name: req.body.name,
       sets: req.body.sets ?? 0,

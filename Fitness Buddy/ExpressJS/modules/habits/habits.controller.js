@@ -29,8 +29,12 @@ exports.listToday = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
+    const id = req.body.id || uuid();
+    const existing = await Habit.query().findOne({ id, user_id: req.user.id });
+    if (existing) return res.status(200).json(existing);
+
     const habit = await Habit.query().insert({
-      id: uuid(),
+      id,
       user_id: req.user.id,
       name: req.body.name,
     });
@@ -59,13 +63,16 @@ exports.listLogs = async (req, res, next) => {
 exports.toggleLog = async (req, res, next) => {
   try {
     const date = req.body.date || todayISO();
+    const habit = await Habit.query().findOne({ id: req.params.id, user_id: req.user.id });
+    if (!habit) return res.status(404).json({ error: 'not_found' });
+
     const existing = await HabitLog.query().findOne({ habit_id: req.params.id, date });
     if (existing) {
       await HabitLog.query().deleteById(existing.id);
       return res.json({ ticked: false });
     }
     const log = await HabitLog.query().insert({
-      id: uuid(),
+      id: req.body.id || uuid(),
       habit_id: req.params.id,
       date,
     });

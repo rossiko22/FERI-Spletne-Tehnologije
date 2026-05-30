@@ -5,6 +5,8 @@ import { Trash2, Plus, Droplet, Calendar, X, Utensils } from 'lucide-react';
 import { useStore } from '@/lib/useStore';
 import { PageHeader, Card, Empty, Stat } from '@/components/ui-bits';
 import { enqueue } from '@/lib/useSync';
+import { useSync, withSync } from '@/lib/useSync';
+import { nutrition as nutritionApi } from '@/lib/api';
 
 export const Route = createFileRoute('/nutrition')({ component: NutritionPage });
 
@@ -40,6 +42,10 @@ function NutritionPage() {
   const [unit, setUnit] = useState<Unit>('kcal');
   const [amount, setAmount] = useState(400);
   const [filterDate, setFilterDate] = useState<string>('');
+  const { state, pending } = useSync();
+
+  const isQueued = (id: string) =>
+    pending.some((q) => q.payload && (q.payload as { id: string }).id === id);
 
   const visible = useMemo(
     () => (filterDate ? items.filter((x) => x.date === filterDate) : items),
@@ -72,20 +78,10 @@ function NutritionPage() {
             if (!name.trim()) return;
             const c = toCanonical(kind, amount, unit);
             const item = await add({ name: name.trim(), kind, amount, unit, ...c, date: today() });
-            await enqueue({
-              kind: 'create',
-              entity: 'meal',
-              payload: {
-                id: item.id,
-                name: item.name,
-                kind: item.kind,
-                amount: item.amount,
-                unit: item.unit,
-                calories: item.calories,
-                water_ml: item.water,
-                date: item.date,
-              },
-            });
+            await withSync(
+              () => nutritionApi.create(item),
+              { kind: 'create', entity: 'meal', payload: item }
+            );
             setName('');
           }}
           className="grid md:grid-cols-6 gap-3"
@@ -115,7 +111,18 @@ function NutritionPage() {
                     {isDrink ? <Droplet className="size-4" strokeWidth={1.5} /> : <Utensils className="size-4" strokeWidth={1.5} />}
                   </span>
                   <div className="min-w-0">
-                    <div className="font-medium truncate">{m.name}</div>
+                    <div className="font-medium truncate flex items-center gap-2">
+                      {m.name}
+                      {isQueued(m.id) && (
+                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                          state === 'syncing'
+                            ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                            : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                        }`}>
+                          {state === 'syncing' ? 'syncing…' : 'queued'}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground font-mono mt-1 flex items-center gap-3 flex-wrap">
                       {m.amount != null && m.unit ? <span>{m.amount} {m.unit}</span> : null}
                       {m.calories > 0 && <span>{m.calories} kcal</span>}
@@ -127,7 +134,10 @@ function NutritionPage() {
                 <button
                   onClick={async () => {
                     await del(m.id);
-                    await enqueue({ kind: 'delete', entity: 'meal', payload: { id: m.id } });
+                    await withSync(
+                      () => nutritionApi.remove(m.id),
+                      { kind: 'delete', entity: 'meal', payload: { id: m.id } }
+                    );
                   }}
                   className="text-muted-foreground hover:text-destructive p-2"
                 >

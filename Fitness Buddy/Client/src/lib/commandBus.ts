@@ -6,6 +6,7 @@ import { getAll, put, remove, uid, type StoreName } from './idb';
 import { toast } from 'sonner';
 import { activity, auth as authApi } from './api';
 import { clearSession } from './authStore';
+import { enqueue } from './useSync';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -41,12 +42,14 @@ export async function runCommand(cmd: CommandId, opts: { source?: 'voice' | 'ges
 
   switch (cmd) {
     case 'log-water': {
-      await addRow('nutrition', { name: 'Quick water', kind: 'drink', amount: 250, unit: 'ml', calories: 0, water: 250, date: todayISO() });
+      const row = await addRow('nutrition', { name: 'Quick water', kind: 'drink', amount: 250, unit: 'ml', calories: 0, water: 250, date: todayISO() });
+      await enqueue({ kind: 'create', entity: 'meal', payload: row });
       toast.success('+250 ml water logged');
       break;
     }
     case 'log-workout-quick': {
-      await addRow('workouts', { ...QUICK_WORKOUT, date: todayISO() });
+      const row = await addRow('workouts', { ...QUICK_WORKOUT, date: todayISO() });
+      await enqueue({ kind: 'create', entity: 'workout', payload: row });
       toast.success(`${QUICK_WORKOUT.name} logged`);
       break;
     }
@@ -57,8 +60,15 @@ export async function runCommand(cmd: CommandId, opts: { source?: 'voice' | 'ges
       const logs = await getAll<{ id: string; habitId: string; date: string }>('habitLogs');
       const target = habits[0];
       const existing = logs.find((l) => l.habitId === target.id && l.date === t);
-      if (existing) { await remove('habitLogs', existing.id); toast(`Unticked "${target.name}"`); }
-      else { await addRow('habitLogs', { habitId: target.id, date: t }); toast.success(`Ticked "${target.name}" for today`); }
+      if (existing) {
+        await remove('habitLogs', existing.id);
+        await enqueue({ kind: 'delete', entity: 'habitLog', payload: { id: existing.id, habitId: existing.habitId, date: existing.date } });
+        toast(`Unticked "${target.name}"`);
+      } else {
+        const row = await addRow('habitLogs', { habitId: target.id, date: t });
+        await enqueue({ kind: 'create', entity: 'habitLog', payload: row });
+        toast.success(`Ticked "${target.name}" for today`);
+      }
       break;
     }
     case 'bump-first-goal': {
@@ -67,6 +77,7 @@ export async function runCommand(cmd: CommandId, opts: { source?: 'voice' | 'ges
       if (!g) { toast.info('No active goals'); break; }
       const next = Math.min(100, (g.progress ?? 0) + 10);
       await put('goals', { ...g, progress: next });
+      await enqueue({ kind: 'update', entity: 'goal', payload: { id: g.id, progress: next } });
       toast.success(`${g.title}: ${next}%`);
       break;
     }
@@ -75,6 +86,7 @@ export async function runCommand(cmd: CommandId, opts: { source?: 'voice' | 'ges
       if (!meals.length) { toast.info('Nothing to delete'); break; }
       const last = meals[meals.length - 1];
       await remove('nutrition', last.id);
+      await enqueue({ kind: 'delete', entity: 'meal', payload: { id: last.id } });
       toast(`Deleted "${last.name}"`);
       break;
     }

@@ -27,8 +27,12 @@ exports.overdue = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
+    const id = req.body.id || uuid();
+    const existing = await Goal.query().findOne({ id, user_id: req.user.id });
+    if (existing) return res.status(200).json(existing);
+
     const goal = await Goal.query().insert({
-      id: uuid(),
+      id,
       user_id: req.user.id,
       title: req.body.title,
       start_date: req.body.startDate,

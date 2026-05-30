@@ -1,8 +1,3 @@
-// Pull the logged-in user's data from Postgres into the local IndexedDB cache.
-// Called whenever a session is established (login, register, OAuth, boot restore).
-// Maps server column names to the client store shapes. Offline / failed requests
-// are swallowed so the existing local cache is kept untouched.
-
 import { clear, put } from './idb';
 import { workouts, habits, goals, nutrition } from './api';
 
@@ -20,7 +15,6 @@ export async function hydrateUserData(): Promise<void> {
       nutrition.list(),
       habits.listLogs(),
     ]);
-
     await replaceStore('workouts', w.items.map((s: any) => ({
       id: s.id, name: s.name, sets: s.sets, reps: s.reps, duration: s.duration_min, date: s.date,
     })));
@@ -35,9 +29,8 @@ export async function hydrateUserData(): Promise<void> {
     await replaceStore('habitLogs', hl.items.map((s: any) => ({
       id: s.id, habitId: s.habit_id, date: s.date,
     })));
-
     window.dispatchEvent(new Event('fb_refresh'));
   } catch {
-    // offline or request failed — keep whatever is cached locally
+    // offline ali request failed — ohrani cache
   }
 }

@@ -18,6 +18,7 @@ router.get(
 
 router.post(
   '/',
+  body('id').optional().isUUID(),
   body('name').isString().trim().isLength({ min: 1, max: 120 }),
   body('sets').optional().isInt({ min: 0 }),
   body('reps').optional().isInt({ min: 0 }),

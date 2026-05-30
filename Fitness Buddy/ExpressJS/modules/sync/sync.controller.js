@@ -75,10 +75,18 @@ async function dispatch(ev, userId) {
     }
     case 'habitLog': {
       if (kind === 'create') {
+        const habit = await Habit.query().findOne({ id: payload.habit_id, user_id: userId });
+        if (!habit) throw new Error('habit_not_found');
         const exists = await HabitLog.query().findById(payload.id);
         if (!exists) await HabitLog.query().insert(payload);
       } else if (kind === 'delete') {
-        await HabitLog.query().deleteById(payload.id);
+        const knex = BaseModel.knex();
+        const habitIds = knex('habits').select('id').where({ user_id: userId });
+        const q = knex('habit_logs').whereIn('habit_id', habitIds);
+        if (payload.id) q.where('id', payload.id);
+        else if (payload.habit_id && payload.date) q.where({ habit_id: payload.habit_id, date: payload.date });
+        else throw new Error('habit_log_delete_missing_identity');
+        await q.del();
       }
       break;
     }
@@ -114,6 +122,8 @@ exports.drain = async (req, res, next) => {
       }
 
       try {
+        await dispatch(ev, req.user.id);
+
         await SyncEvent.query().insert({
           id:      evId,
           user_id: req.user.id,
@@ -122,7 +132,6 @@ exports.drain = async (req, res, next) => {
           payload: ev.payload ?? null,
         });
 
-        await dispatch(ev, req.user.id);
         results.push({ id: evId, status: 'applied' });
       } catch (err) {
         console.error(`[sync] event ${evId} failed:`, err.message);

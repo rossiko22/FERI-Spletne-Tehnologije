@@ -31,19 +31,29 @@ export function useNotifications() {
     setLoading(true);
     setError(null);
     try {
+      console.log('1. start');
       const { publicKey } = await notifApi.publicKey();
-      if (!publicKey) throw new Error('VAPID public key ni nastavljen na strežniku');
+      console.log('2. publicKey:', publicKey);
+      if (!publicKey) throw new Error('no VAPID key');
       const perm = await Notification.requestPermission();
-      setPermission(perm);
-      if (perm !== 'granted') throw new Error('Dovoljenje zavrnjeno');
-      const reg = await navigator.serviceWorker.ready;
+      console.log('3. permission:', perm);
+      if (perm !== 'granted') throw new Error('permission denied');
+      console.log('4. waiting for SW...');
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('SW timeout')), 5000))
+      ]) as ServiceWorkerRegistration;
+      console.log('5. SW ready');
       const sub = await reg.pushManager.subscribe({
-        userVisibleOnly:      true,
+        userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
+      console.log('6. subscribed:', sub.endpoint);
       await notifApi.subscribe(sub.toJSON());
+      console.log('7. server notified');
       setSubscribed(true);
     } catch (e: unknown) {
+      console.error('ERROR:', e);
       setError(e instanceof Error ? e.message : 'Napaka');
     } finally {
       setLoading(false);

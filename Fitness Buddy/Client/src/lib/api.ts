@@ -78,10 +78,11 @@ export const auth = {
 // Habits (Sladja)
 export const habits = {
   list: () => api.get<{ items: any[] }>('/habits'),
-  create: (name: string) => api.post<any>('/habits', { name }),
+  create: (data: { id?: string; name: string } | string) =>
+    api.post<any>('/habits', typeof data === 'string' ? { name: data } : data),
   remove: (id: string) => api.delete<{ ok: true }>(`/habits/${id}`),
-  toggleLog: (id: string, date?: string) =>
-    api.post<{ ticked: boolean }>(`/habits/${id}/logs`, { date }),
+  toggleLog: (id: string, date?: string, logId?: string) =>
+    api.post<{ ticked: boolean }>(`/habits/${id}/logs`, { date, id: logId }),
   listLogs: (date?: string) =>
     api.get<{ items: any[] }>(`/habits/logs${date ? `?date=${date}` : ''}`),
 };

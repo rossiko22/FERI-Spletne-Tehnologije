@@ -13,6 +13,7 @@ router.get('/overdue', c.overdue);
 
 router.post(
   '/',
+  body('id').optional().isUUID(),
   body('title').isString().trim().isLength({ min: 1, max: 200 }),
   body('startDate').optional().isISO8601(),
   body('deadline').optional().isISO8601(),

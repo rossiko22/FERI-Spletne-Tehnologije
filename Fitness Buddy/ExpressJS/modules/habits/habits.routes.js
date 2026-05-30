@@ -12,8 +12,21 @@ router.get('/with-logs', c.listWithLogs);
 router.get('/today', c.listToday);
 router.get('/logs', c.listLogs);
 
-router.post('/', body('name').isString().trim().isLength({ min: 1, max: 120 }), validate, c.create);
+router.post(
+  '/',
+  body('id').optional().isUUID(),
+  body('name').isString().trim().isLength({ min: 1, max: 120 }),
+  validate,
+  c.create,
+);
 router.delete('/:id', param('id').isUUID(), validate, c.remove);
-router.post('/:id/logs', param('id').isUUID(), validate, c.toggleLog);
+router.post(
+  '/:id/logs',
+  param('id').isUUID(),
+  body('id').optional().isUUID(),
+  body('date').optional().isISO8601(),
+  validate,
+  c.toggleLog,
+);
 
 module.exports = router;

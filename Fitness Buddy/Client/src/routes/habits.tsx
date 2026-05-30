@@ -5,6 +5,8 @@ import { Trash2, Plus, Check, Calendar, X, Flag } from 'lucide-react';
 import { useStore } from '@/lib/useStore';
 import { PageHeader, Empty } from '@/components/ui-bits';
 import { enqueue } from '@/lib/useSync';
+import { useSync, withSync } from '@/lib/useSync';
+import { habits as habitsApi } from '@/lib/api';
 
 export const Route = createFileRoute('/habits')({ component: HabitsPage });
 
@@ -17,6 +19,11 @@ function HabitsPage() {
   const logs = useStore<Log>('habitLogs');
   const [name, setName] = useState('');
   const [filterDate, setFilterDate] = useState<string>('');
+
+  const { state, pending } = useSync();
+
+  const isQueued = (id: string) =>
+    pending.some((q) => q.payload && (q.payload as { id: string }).id === id);
 
   const todaySet = useMemo(
     () => new Set(logs.items.filter((l) => l.date === today()).map((l) => l.habitId)),
@@ -40,10 +47,16 @@ function HabitsPage() {
     const existing = logs.items.find((l) => l.habitId === habitId && l.date === t);
     if (existing) {
       await logs.del(existing.id);
-      await enqueue({ kind: 'delete', entity: 'habitLog', payload: { id: existing.id } });
+      await withSync(
+        () => habitsApi.toggleLog(habitId, t),
+        { kind: 'delete', entity: 'habitLog', payload: { id: existing.id, habitId, date: t } }
+      );
     } else {
       const item = await logs.add({ habitId, date: t });
-      await enqueue({ kind: 'create', entity: 'habitLog', payload: item });
+      await withSync(
+        () => habitsApi.toggleLog(habitId, t, item.id),
+        { kind: 'create', entity: 'habitLog', payload: item }
+      );
     }
   };
 
@@ -62,7 +75,10 @@ function HabitsPage() {
             e.preventDefault();
             if (!name.trim()) return;
             const item = await habits.add({ name: name.trim() });
-            await enqueue({ kind: 'create', entity: 'habit', payload: item });
+            await withSync(
+              () => habitsApi.create(item),
+              { kind: 'create', entity: 'habit', payload: item }
+            );
             setName('');
           }}
           className="flex gap-3"
@@ -97,7 +113,18 @@ function HabitsPage() {
             return (
               <li key={h.id} className="rounded-lg border border-border bg-card p-4 flex items-center justify-between">
                 <div>
-                  <div className="font-medium">{h.name}</div>
+                  <div className="font-medium flex items-center gap-2">
+                    {h.name}
+                    {isQueued(h.id) && (
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                        state === 'syncing'
+                          ? 'bg-blue-500/15 text-blue-400 border-blue-500/30'
+                          : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
+                      }`}>
+                        {state === 'syncing' ? 'syncing…' : 'queued'}
+                      </span>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground font-mono mt-1">streak · {s} day{s === 1 ? '' : 's'} {isReadOnly ? `· ${filterDate} ${done ? '✓' : '—'}` : ''}</div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -107,7 +134,10 @@ function HabitsPage() {
                   <button
                     onClick={async () => {
                       await habits.del(h.id);
-                      await enqueue({ kind: 'delete', entity: 'habit', payload: { id: h.id } });
+                      await withSync(
+                        () => habitsApi.remove(h.id),
+                        { kind: 'delete', entity: 'habit', payload: { id: h.id } }
+                      );
                     }}
                     className="text-muted-foreground hover:text-destructive p-2"
                   >
