@@ -1,4 +1,4 @@
-// Profile page — OWNER: shared (Marko for auth section, Ana for push+sync toggles).
+
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Bell, BellOff, Download, LogOut, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';

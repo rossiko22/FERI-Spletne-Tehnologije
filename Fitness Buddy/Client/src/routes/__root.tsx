@@ -252,7 +252,6 @@ function RootComponent() {
         </main>
         <footer className="border-t border-border">
           <div className="mx-auto max-w-[1280px] px-6 py-6 text-xs text-muted-foreground flex justify-between">
-            <span>FitnessBuddy · offline-first · Ana · Sladjana · Marko</span>
             <span className="font-mono">v0.1</span>
           </div>
         </footer>
