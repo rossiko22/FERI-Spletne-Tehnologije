@@ -67,14 +67,22 @@ export function subscribe(fn: () => void): () => void {
   return () => { listeners.delete(fn); };
 }
 
+// Tell the IndexedDB-backed stores to re-read — the active per-user database
+// changes whenever the session does.
+function notifyStores() {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('fb_refresh'));
+}
+
 export function setSession(user: AuthUser, accessToken: string) {
   try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch { /* private mode */ }
   set({ user, accessToken, expiresAt: Date.now() + 15 * 60_000, status: 'authed' });
+  notifyStores();
 }
 
 export function clearSession() {
   try { localStorage.removeItem(USER_KEY); } catch { /* private mode */ }
   set({ user: null, accessToken: null, expiresAt: null, status: 'anon' });
+  notifyStores();
 }
 
 // Boot refresh couldn't reach the server (offline). If we have a cached user,

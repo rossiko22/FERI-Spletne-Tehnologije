@@ -53,6 +53,7 @@ app.use('/api/nutrition', require('./modules/nutrition/nutrition.routes'));   //
 app.use('/api/sync', require('./modules/sync/sync.routes'));                  // Ana
 app.use('/api/notifications', require('./modules/notifications/notifications.routes')); // Ana
 app.use('/api/activity', require('./modules/activity/activity.routes'));      // Marko
+app.use('/api/ai', require('./modules/ai/ai.routes'));                        // Marko (Azure voice)
 
 // --- 404 + central error handler ---
 app.use((req, res) => res.status(404).json({ error: 'not_found', path: req.path }));

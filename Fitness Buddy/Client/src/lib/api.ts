@@ -130,3 +130,44 @@ export const activity = {
   log: (data: { source: 'voice' | 'gesture'; command: string; transcript?: string }) =>
     api.post<any>('/activity', data),
 };
+
+// AI voice (Marko — Azure OpenAI). Online-only; the VoicePanel gates these offline.
+export type AiIntent = 'workout' | 'food' | 'drink';
+export const ai = {
+  parse: (transcript: string) =>
+    api.post<{ intent: AiIntent; fields: Record<string, any> }>('/ai/parse', { transcript }),
+  summary: () => api.get<{ text: string; stats: Record<string, any> }>('/ai/summary'),
+  // Synthesize speech via Azure AI Speech (neural American voices). Returns
+  // an mp3 Blob the caller can pipe into <audio> for playback.
+  speak: async (text: string): Promise<Blob> => {
+    const send = async (): Promise<Response> => {
+      const tok = getAccessToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (tok) headers.Authorization = `Bearer ${tok}`;
+      return fetch(`${BASE}/ai/speak`, {
+        method: 'POST', body: JSON.stringify({ text }), headers, credentials: 'include',
+      });
+    };
+    let res = await send();
+    if (res.status === 401 && await refreshSession()) res = await send();
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.blob();
+  },
+  // Upload recorded audio for transcription via Azure OpenAI Whisper. Goes
+  // through the normal access-token / refresh-on-401 flow but bypasses the
+  // JSON wrapper because the body is a raw Blob.
+  transcribe: async (blob: Blob): Promise<{ text: string; status?: string }> => {
+    const send = async (): Promise<Response> => {
+      const tok = getAccessToken();
+      const headers: Record<string, string> = { 'Content-Type': blob.type || 'audio/webm' };
+      if (tok) headers.Authorization = `Bearer ${tok}`;
+      return fetch(`${BASE}/ai/transcribe`, {
+        method: 'POST', body: blob, headers, credentials: 'include',
+      });
+    };
+    let res = await send();
+    if (res.status === 401 && await refreshSession()) res = await send();
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.json();
+  },
+};

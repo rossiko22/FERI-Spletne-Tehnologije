@@ -4,9 +4,13 @@
 
 import { getAll, put, remove, uid, type StoreName } from './idb';
 import { toast } from 'sonner';
-import { activity } from './api';
+import { activity, auth as authApi } from './api';
+import { clearSession } from './authStore';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+// Settings — edit this to change what the "quick workout" gesture/voice command logs.
+const QUICK_WORKOUT = { name: 'Quick set', sets: 1, reps: 10, duration: 5 };
 
 export type CommandId =
   | 'log-water'
@@ -17,7 +21,8 @@ export type CommandId =
   | 'toggle-rest-timer'
   | 'next-tab'
   | 'prev-tab'
-  | 'confirm';
+  | 'confirm'
+  | 'logout';
 
 async function addRow<T extends { id: string }>(store: StoreName, value: Omit<T, 'id'>) {
   const row = { ...value, id: uid() } as T;
@@ -41,8 +46,8 @@ export async function runCommand(cmd: CommandId, opts: { source?: 'voice' | 'ges
       break;
     }
     case 'log-workout-quick': {
-      await addRow('workouts', { name: 'Quick set', sets: 1, reps: 10, duration: 5, date: todayISO() });
-      toast.success('Quick workout set logged');
+      await addRow('workouts', { ...QUICK_WORKOUT, date: todayISO() });
+      toast.success(`${QUICK_WORKOUT.name} logged`);
       break;
     }
     case 'tick-first-habit': {
@@ -86,6 +91,12 @@ export async function runCommand(cmd: CommandId, opts: { source?: 'voice' | 'ges
     case 'confirm': {
       window.dispatchEvent(new Event('fb_confirm'));
       toast('Confirmed');
+      break;
+    }
+    case 'logout': {
+      try { await authApi.logout(); } catch { /* clear locally regardless */ }
+      clearSession();
+      toast('Signed out');
       break;
     }
   }

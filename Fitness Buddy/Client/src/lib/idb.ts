@@ -1,18 +1,32 @@
 // Minimal IndexedDB wrapper. Shared by the local stores, command bus, and
 // offline sync queue.
-const DB_NAME = 'fitnessbuddy'
+//
+// The database name is namespaced per logged-in user (fitnessbuddy_u_<id>), so
+// every account gets a fully isolated local cache + sync queue. Switching users
+// transparently reopens the right database.
+import { getState } from './authStore'
+
+const DB_PREFIX = 'fitnessbuddy'
 const DB_VERSION = 3
 
 const STORES = ['workouts', 'nutrition', 'habits', 'habitLogs', 'goals', 'syncQueue'] as const
 export type StoreName = (typeof STORES)[number]
 
+function currentDbName(): string {
+  const uid = getState().user?.id
+  return uid ? `${DB_PREFIX}_u_${uid}` : `${DB_PREFIX}_anon`
+}
+
 let _db: IDBDatabase | null = null
+let _dbName: string | null = null
 
 export function openDB(): Promise<IDBDatabase> {
   if (typeof indexedDB === 'undefined') return Promise.reject(new Error('IDB unavailable'))
-  if (_db) return Promise.resolve(_db)
+  const name = currentDbName()
+  if (_db && _dbName === name) return Promise.resolve(_db)
+  if (_db && _dbName !== name) { try { _db.close() } catch { /* ignore */ } _db = null }
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
+    const req = indexedDB.open(name, DB_VERSION)
 
     req.onupgradeneeded = (e) => {
       const db = (e.target as IDBOpenDBRequest).result
@@ -52,7 +66,7 @@ export function openDB(): Promise<IDBDatabase> {
         db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true })
     }
 
-    req.onsuccess = () => { _db = req.result; resolve(_db) }
+    req.onsuccess = () => { _db = req.result; _dbName = name; resolve(_db) }
     req.onerror  = () => reject(req.error)
   })
 }
@@ -101,6 +115,17 @@ export async function del(store: StoreName, id: IDBValidKey): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx  = db.transaction(store, 'readwrite')
     tx.objectStore(store).delete(id)
+    tx.oncomplete = () => resolve()
+    tx.onerror    = () => reject(tx.error)
+  })
+}
+
+// Empty a store (used when re-hydrating a user's cache from the server).
+export async function clear(store: StoreName): Promise<void> {
+  const db = await openDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, 'readwrite')
+    tx.objectStore(store).clear()
     tx.oncomplete = () => resolve()
     tx.onerror    = () => reject(tx.error)
   })

@@ -7,8 +7,37 @@ const { Habit, HabitLog } = require('../../models/Habit');
 // Goal nima modela — poiščemo direktno v DB
 const { BaseModel }   = require('../../config/db');
 
-async function dispatch(ev) {
-  const { entity, kind, payload } = ev;
+// Align a client payload with the DB columns and stamp the owner. The client
+// uses a few different field names (duration→duration_min, habitId→habit_id);
+// water_ml / start_date already arrive aligned from the routes.
+function normalize(entity, raw, userId) {
+  const p = { ...raw };
+  switch (entity) {
+    case 'workout':
+      if (p.duration != null && p.duration_min == null) p.duration_min = p.duration;
+      delete p.duration;
+      p.user_id = userId;
+      break;
+    case 'meal':
+      if (p.water != null && p.water_ml == null) p.water_ml = p.water;
+      delete p.water;
+      p.user_id = userId;
+      break;
+    case 'habit':
+    case 'goal':
+      p.user_id = userId;
+      break;
+    case 'habitLog':
+      if (p.habitId) { p.habit_id = p.habitId; delete p.habitId; }
+      // habit_logs has no user_id column — it's scoped through its habit.
+      break;
+  }
+  return p;
+}
+
+async function dispatch(ev, userId) {
+  const { entity, kind } = ev;
+  const payload = normalize(entity, ev.payload || {}, userId);
 
   switch (entity) {
     case 'workout': {
@@ -16,9 +45,9 @@ async function dispatch(ev) {
         const exists = await Workout.query().findById(payload.id);
         if (!exists) await Workout.query().insert(payload);
       } else if (kind === 'update') {
-        await Workout.query().patchAndFetchById(payload.id, payload);
+        await Workout.query().where({ id: payload.id, user_id: userId }).patch(payload);
       } else if (kind === 'delete') {
-        await Workout.query().deleteById(payload.id);
+        await Workout.query().where({ id: payload.id, user_id: userId }).delete();
       }
       break;
     }
@@ -27,9 +56,9 @@ async function dispatch(ev) {
         const exists = await Meal.query().findById(payload.id);
         if (!exists) await Meal.query().insert(payload);
       } else if (kind === 'update') {
-        await Meal.query().patchAndFetchById(payload.id, payload);
+        await Meal.query().where({ id: payload.id, user_id: userId }).patch(payload);
       } else if (kind === 'delete') {
-        await Meal.query().deleteById(payload.id);
+        await Meal.query().where({ id: payload.id, user_id: userId }).delete();
       }
       break;
     }
@@ -38,26 +67,18 @@ async function dispatch(ev) {
         const exists = await Habit.query().findById(payload.id);
         if (!exists) await Habit.query().insert(payload);
       } else if (kind === 'update') {
-        await Habit.query().patchAndFetchById(payload.id, payload);
+        await Habit.query().where({ id: payload.id, user_id: userId }).patch(payload);
       } else if (kind === 'delete') {
-        await Habit.query().deleteById(payload.id);
+        await Habit.query().where({ id: payload.id, user_id: userId }).delete();
       }
       break;
     }
     case 'habitLog': {
-      // Pretvori habitId → habit_id za DB
-      const dbPayload = { ...payload };
-      if (dbPayload.habitId) {
-        dbPayload.habit_id = dbPayload.habitId;
-        delete dbPayload.habitId;
-      }
       if (kind === 'create') {
-        const exists = await HabitLog.query().findById(dbPayload.id);
-        if (!exists) await HabitLog.query().insert(dbPayload);
-      } else if (kind === 'update') {
-        await HabitLog.query().patchAndFetchById(dbPayload.id, dbPayload);
+        const exists = await HabitLog.query().findById(payload.id);
+        if (!exists) await HabitLog.query().insert(payload);
       } else if (kind === 'delete') {
-        await HabitLog.query().deleteById(dbPayload.id);
+        await HabitLog.query().deleteById(payload.id);
       }
       break;
     }
@@ -68,9 +89,9 @@ async function dispatch(ev) {
         const exists = await knex('goals').where({ id: payload.id }).first();
         if (!exists) await knex('goals').insert(payload);
       } else if (kind === 'update') {
-        await knex('goals').where({ id: payload.id }).update(payload);
+        await knex('goals').where({ id: payload.id, user_id: userId }).update(payload);
       } else if (kind === 'delete') {
-        await knex('goals').where({ id: payload.id }).delete();
+        await knex('goals').where({ id: payload.id, user_id: userId }).delete();
       }
       break;
     }
@@ -101,7 +122,7 @@ exports.drain = async (req, res, next) => {
           payload: ev.payload ?? null,
         });
 
-        await dispatch(ev);
+        await dispatch(ev, req.user.id);
         results.push({ id: evId, status: 'applied' });
       } catch (err) {
         console.error(`[sync] event ${evId} failed:`, err.message);

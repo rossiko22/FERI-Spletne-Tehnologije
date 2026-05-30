@@ -21,10 +21,16 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectManifest: {
         swDest: 'dist/sw.js',
+        // transformers.js ships ~23 MB of ONNX runtime wasm. Don't precache
+        // it (would blow past Workbox's 2 MB-per-asset limit); it's fetched
+        // on demand the first time offline voice is preloaded.
+        globIgnores: ['**/*.wasm'],
       },
       manifest: false,
       devOptions: {
-        enabled: true,   // SW aktiven tudi v dev načinu
+        // SW disabled in dev — it was serving a stale cached bundle and hiding
+        // source changes. Offline still works in production builds (npm run build).
+        enabled: false,
         type: 'module',
       }
     })

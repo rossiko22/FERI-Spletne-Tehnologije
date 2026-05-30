@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { LogIn, Activity } from 'lucide-react';
 import { useAuth } from '@/lib/useAuth';
 import { refreshSession } from '@/lib/api';
+import { hydrateUserData } from '@/lib/hydrate';
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -54,7 +55,7 @@ function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     if (!params.get('oauth')) return;
     refreshSession().then((ok) => {
-      if (ok) nav({ to: '/' });
+      if (ok) { hydrateUserData(); nav({ to: '/' }); }
       else setErr('Google sign-in failed. Please try again.');
     });
   }, [nav]);

@@ -58,7 +58,7 @@ class Workout extends BaseModel {
     return this.query()
       .where({ user_id: userId })
       .whereBetween('date', [from, to])
-      .select(knex.raw("strftime('%Y-%W', date) as week"))
+      .select(knex.raw("to_char(date, 'IYYY-IW') as week"))
       .sum({ total_min: 'duration_min' })
       .groupBy('week')
       .orderBy('week', 'asc');

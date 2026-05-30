@@ -6,17 +6,25 @@ import { useEffect, useState } from 'react';
 import { Camera, CameraOff, Hand, Play } from 'lucide-react';
 import { runCommand } from '@/lib/commandBus';
 import { useCamera } from '@/lib/useCamera';
+import { useGestures, type DetectedGesture } from '@/lib/useGestures';
 
 type Gesture = { id: string; label: string; does: string; run: () => void | Promise<void> };
 
 const GESTURES: Gesture[] = [
-  { id: 'palm',   label: '✋ Open palm',     does: 'Toggle rest timer',         run: () => runCommand('toggle-rest-timer',   { source: 'gesture', transcript: 'palm' }) },
-  { id: 'fist',   label: '✊ Closed fist',   does: 'Log quick workout set',     run: () => runCommand('log-workout-quick',   { source: 'gesture', transcript: 'fist' }) },
-  { id: 'thumbs', label: '👍 Thumbs up',     does: 'Tick first habit / confirm', run: () => runCommand('tick-first-habit',  { source: 'gesture', transcript: 'thumbs' }) },
-  { id: 'two',    label: '🖐️🖐️ Two hands',  does: 'Bump first goal +1',        run: () => runCommand('bump-first-goal',     { source: 'gesture', transcript: 'two' }) },
-  { id: 'swipe',  label: '👉 Swipe right',   does: 'Next tab',                  run: () => runCommand('next-tab',            { source: 'gesture', transcript: 'swipe' }) },
-  { id: 'swipeL', label: '👈 Swipe left',    does: 'Previous tab',              run: () => runCommand('prev-tab',            { source: 'gesture', transcript: 'swipeL' }) },
+  { id: 'thumbsUp', label: '👍 Thumbs up',  does: 'Log quick workout', run: () => runCommand('log-workout-quick', { source: 'gesture', transcript: 'thumbsUp' }) },
+  { id: 'swipe',    label: '👉 Swipe right', does: 'Next tab',          run: () => runCommand('next-tab',          { source: 'gesture', transcript: 'swipe' }) },
+  { id: 'swipeL',   label: '👈 Swipe left',  does: 'Previous tab',      run: () => runCommand('prev-tab',          { source: 'gesture', transcript: 'swipeL' }) },
+  { id: 'palm',     label: '✋ Open palm',    does: 'Logout',            run: () => runCommand('logout',            { source: 'gesture', transcript: 'palm' }) },
 ];
+
+// Maps a recognized gesture to the matching simulate-button id above, so live
+// detection and the manual buttons trigger identical behavior.
+const GESTURE_ID: Record<DetectedGesture, string> = {
+  thumbsUp: 'thumbsUp',
+  palm: 'palm',
+  swipeRight: 'swipe',
+  swipeLeft: 'swipeL',
+};
 
 export function VisionPanel() {
   const cam = useCamera();
@@ -35,6 +43,12 @@ export function VisionPanel() {
     await g.run();
     setHistory((h) => [`✓ ${g.label} — ${g.does}`, ...h].slice(0, 6));
   };
+
+  // Real recognition: drive the same handlers as the simulate buttons.
+  const vision = useGestures(cam.videoRef, cam.active, (detected: DetectedGesture) => {
+    const g = GESTURES.find((x) => x.id === GESTURE_ID[detected]);
+    if (g) fire(g);
+  });
 
   if (!open) {
     return (
@@ -61,10 +75,15 @@ export function VisionPanel() {
       </div>
 
       <div className="aspect-video bg-secondary relative">
-        <video ref={cam.videoRef} className="w-full h-full object-cover" muted playsInline />
+        <video ref={cam.videoRef} className="w-full h-full object-cover -scale-x-100" muted playsInline />
         {!cam.active && (
           <div className="absolute inset-0 grid place-items-center text-[10px] text-muted-foreground text-center px-3">
             Camera idle · use the gesture buttons below
+          </div>
+        )}
+        {cam.active && (
+          <div className="absolute top-1 left-1 text-[10px] font-mono bg-card/90 border border-border rounded px-1.5 py-0.5">
+            {vision.error ? '⚠ model failed' : vision.ready ? `✋ ${vision.live}` : 'loading model…'}
           </div>
         )}
         {last && (
@@ -82,6 +101,16 @@ export function VisionPanel() {
           {cam.active ? <CameraOff className="size-3" strokeWidth={1.5} /> : <Camera className="size-3" strokeWidth={1.5} />}
           {cam.active ? 'Stop camera' : 'Start camera'}
         </button>
+        {cam.active && (
+          <div className="mt-2 text-[10px] text-muted-foreground text-center">
+            {vision.error
+              ? 'Gesture model unavailable — use the buttons below.'
+              : vision.ready
+                ? 'Live: 👍 thumbs=log workout · 👉/👈 swipe=tabs · ✋ palm=logout'
+                : 'Loading gesture model…'}
+          </div>
+        )}
+        {cam.error && <div className="mt-2 text-[10px] text-destructive text-center">{cam.error}</div>}
       </div>
 
       <div className="p-3 border-b border-border">

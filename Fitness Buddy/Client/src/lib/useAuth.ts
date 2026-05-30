@@ -7,6 +7,7 @@
 import { useSyncExternalStore } from 'react';
 
 import { auth as authApi, refreshSession } from './api';
+import { hydrateUserData } from './hydrate';
 import {
   getState,
   subscribe,
@@ -24,11 +25,13 @@ export function useAuth() {
   const login = async (email: string, password: string) => {
     const r = await authApi.login({ email, password });
     setSession(r.user, r.access);
+    void hydrateUserData();
   };
 
   const register = async (email: string, name: string, password: string) => {
     const r = await authApi.register({ email, name, password });
     setSession(r.user, r.access);
+    void hydrateUserData();
   };
 
   const logout = async () => {
