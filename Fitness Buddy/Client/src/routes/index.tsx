@@ -68,7 +68,7 @@ function Today() {
 
   return (
     <div>
-      <PageHeader eyebrow={isToday ? 'Today' : 'Day view'} title="Train. Eat. Build the streak." sub="Offline-first PWA. Voice and gesture controls live in the floating panels." />
+      <PageHeader eyebrow={isToday ? 'Today' : 'Day view'} title="Train. Eat. Build the streak." sub="Track your fitness data smoothly across workouts, nutrition, habits, and goals." />
 
       <div className="flex items-center justify-between mb-6">
         <div>

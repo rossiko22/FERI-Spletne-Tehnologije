@@ -78,7 +78,7 @@ function GoalsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Module · Sladjana" title="Goals" sub="One title, two dates, a progress bar from 0% to 100%. Slipping goals trigger a push reminder." />
+      <PageHeader title="Goals" sub="One title, two dates, a progress bar from 0% to 100%. Slipping goals trigger a push reminder." />
 
       <div className="mb-6 flex gap-2">
         <Link to="/habits" className="px-3 py-1.5 rounded-md text-sm border border-border hover:border-primary">Habits</Link>

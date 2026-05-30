@@ -63,7 +63,7 @@ function NutritionPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Module · Sladjana" title="Nutrition" sub="Meals, calories, hydration. New entries are always logged to today." />
+      <PageHeader title="Nutrition" sub="Meals, calories, hydration. New entries are always logged to today." />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <Stat label={filterDate ? 'Calories (filtered)' : 'Calories total'} value={kcal} unit="kcal" />

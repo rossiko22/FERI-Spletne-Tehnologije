@@ -62,7 +62,7 @@ function HabitsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Module · Sladjana" title="Habits & Goals" sub="Build streaks. Check-ins always count for today — use the filter to inspect past days. Tap 'Goals' below to switch to long-term targets." />
+      <PageHeader title="Habits & Goals" sub="Build streaks. Check-ins always count for today — use the filter to inspect past days. Tap 'Goals' below to switch to long-term targets." />
 
       <div className="mb-6 flex gap-2">
         <Link to="/habits" className="px-3 py-1.5 rounded-md text-sm bg-primary text-primary-foreground">Habits</Link>

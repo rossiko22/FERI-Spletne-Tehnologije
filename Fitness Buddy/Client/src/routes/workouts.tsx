@@ -33,7 +33,7 @@ function WorkoutsPage() {
 
   return (
     <div>
-      <PageHeader eyebrow="Module · Sladjana" title="Workouts" sub="Strength, cardio, mobility. New entries are always logged to today." />
+      <PageHeader title="Workouts" sub="Strength, cardio, mobility. New entries are always logged to today." />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
         <Stat label={filterDate ? 'Sessions (filtered)' : 'Sessions'} value={sessions} />

@@ -1,10 +1,10 @@
 import { type ReactNode } from 'react';
 
-export function PageHeader({ eyebrow, title, sub }: { eyebrow: string; title: string; sub?: string }) {
+export function PageHeader({ eyebrow, title, sub }: { eyebrow?: string; title: string; sub?: string }) {
   return (
     <header className="mb-10">
-      <div className="text-xs font-mono uppercase tracking-widest text-primary">{eyebrow}</div>
-      <h1 className="mt-2 text-4xl md:text-5xl font-semibold">{title}</h1>
+      {eyebrow && <div className="text-xs font-mono uppercase tracking-widest text-primary">{eyebrow}</div>}
+      <h1 className={`${eyebrow ? 'mt-2' : ''} text-4xl md:text-5xl font-semibold`}>{title}</h1>
       {sub && <p className="mt-3 text-sm text-muted-foreground max-w-xl">{sub}</p>}
     </header>
   );
